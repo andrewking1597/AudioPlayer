@@ -1,6 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <iostream>
+#include <fstream>
 
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener
 {
@@ -32,6 +34,12 @@ private:
     juce::AudioFormatManager formatManager; // Controls what audio formats are allowed (.wav and .aiff)
     std::unique_ptr<juce::AudioFormatReaderSource> playSource; // plays data received from tempSource
     juce::AudioTransportSource transport; // positionable audio playback object
+    juce::AudioFormatReader* reader; // reads samples from audio file stream
+    
+    //TEMP
+    juce::AudioBuffer<float> slowBuffer;
+    std::fstream f;
+    //ENDTEMP
     
     // Buttons
     juce::TextButton openButton;
