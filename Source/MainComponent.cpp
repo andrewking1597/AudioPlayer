@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(Stopped)
+MainComponent::MainComponent() : state(Stopped), slowBuffer(2, 5644800) //todo make more efficient by resizing later as needed
 {
     // Make sure you set the size of the component after
     // you add any child components.
@@ -41,6 +41,10 @@ MainComponent::MainComponent() : state(Stopped)
     // listen for when the state of transport changes and call the changeListener callback function
     transport.addChangeListener(this);
     
+    //TEMP
+    slowBuffer.clear();
+    //ENDTEMP
+    
 }
 
 MainComponent::~MainComponent()
@@ -58,7 +62,12 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     // Your audio-processing code goes here!
-
+    
+    //TEMP
+    // read samples into bufferToFill.buffer
+    // need a way to keep track of index to read from
+    //ENDTEMP
+    
     // Right now we are not producing any data, in which case we need to clear the buffer
     // (to prevent the output of random noise)
     bufferToFill.clearActiveBufferRegion();
@@ -103,7 +112,19 @@ void MainComponent::openButtonClicked()
         // Get the chosen file
         juce::File loadedFile = chooser.getResult();
         // Read the file
-        juce::AudioFormatReader* reader = formatManager.createReaderFor(loadedFile);
+        reader = formatManager.createReaderFor(loadedFile);
+        
+        //TEMP
+        //todo determine a good location
+        f.open("/Users/andrewking/Desktop/tempslow.txt", std::ios::app);
+        //            array of channel out pointers,       number of out channels, start sample, number of samples to read
+        reader->read(slowBuffer.getArrayOfWritePointers(), slowBuffer.getNumChannels(), 0, slowBuffer.getNumSamples());
+        
+        for (int i = 0; i < slowBuffer.getNumSamples(); i++) {
+            f << slowBuffer.getSample(0, i) << "   " << slowBuffer.getSample(1, i) << std::endl;
+        }
+        f.close();
+        //TEMP
         
         if (reader != nullptr) {
             // Get the file ready to play
@@ -161,7 +182,8 @@ void MainComponent::transportStateChanged(TransportState newState)
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &transport) {
+    if (source == &transport)
+    {
         if (transport.isPlaying()) {
             transportStateChanged(Playing);
         } else {
