@@ -2,7 +2,6 @@
 
 #include <JuceHeader.h>
 #include <iostream>
-#include <fstream>
 
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener
 {
