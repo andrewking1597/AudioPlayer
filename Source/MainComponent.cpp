@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(Stopped), slowBuffer(2, 5644800) //todo make more efficient by resizing later as needed
+MainComponent::MainComponent() : state(Stopped)
 {
     // Make sure you set the size of the component after
     // you add any child components.
@@ -51,6 +51,8 @@ MainComponent::~MainComponent()
 {
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
+    
+    delete reader;
 }
 
 //==============================================================================
@@ -62,11 +64,6 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     // Your audio-processing code goes here!
-    
-    //TEMP
-    // read samples into bufferToFill.buffer
-    // need a way to keep track of index to read from
-    //ENDTEMP
     
     // Right now we are not producing any data, in which case we need to clear the buffer
     // (to prevent the output of random noise)
@@ -114,21 +111,36 @@ void MainComponent::openButtonClicked()
         // Read the file
         reader = formatManager.createReaderFor(loadedFile);
         
-        //TEMP
-        //todo determine a good location
-        f.open("/Users/andrewking/Desktop/tempslow.txt", std::ios::app);
-        //            array of channel out pointers,       number of out channels, start sample, number of samples to read
-        reader->read(slowBuffer.getArrayOfWritePointers(), slowBuffer.getNumChannels(), 0, slowBuffer.getNumSamples());
+        // set slowBuffer's size to hold twice as many samples as reader
+        slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
+        slowBuffer.clear();
         
-        for (int i = 0; i < slowBuffer.getNumSamples(); i++) {
-            f << slowBuffer.getSample(0, i) << "   " << slowBuffer.getSample(1, i) << std::endl;
+        // tempBuffer to read the audio stream into
+        juce::AudioBuffer<float> tempBuffer; //todo use a pointer and then delete
+        tempBuffer.setSize(2, (int) reader->lengthInSamples, false, true, false);
+        tempBuffer.clear();
+        
+        reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
+        
+        // copy each sample from tempBuffer to slowBuffer and duplicate every 8th sample
+        for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
+        {
+            // calculate the index to write the sample and write the sample for each channel
+            int destSampleIX = getDestIndex(sourceSampleIX, 8);
+            slowBuffer.setSample(0, destSampleIX, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
+            slowBuffer.setSample(1, destSampleIX, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
+
+            // if sourceSampleIX is a multiple of the interval: copy the samples to the next index also
+            if (sourceSampleIX % 8 == 0)
+            {
+                slowBuffer.setSample(0, destSampleIX+1, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
+                slowBuffer.setSample(1, destSampleIX+1, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
+            }
         }
-        f.close();
-        //TEMP
-        
+
         if (reader != nullptr) {
             // Get the file ready to play
-            std::unique_ptr<juce::AudioFormatReaderSource> tempSource(new juce::AudioFormatReaderSource(reader, true));
+            std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
             // set transport source to the data that tempSource is pointing to
             transport.setSource(tempSource.get());
             // change state to Stopped
@@ -190,4 +202,19 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
             transportStateChanged(Stopped);
         }
     }
+}
+
+int MainComponent::getDestIndex(int sourceSampleNum, int interval)
+{
+    int samplesToDuplicate, destIndex;
+    
+    if (sourceSampleNum % interval == 0) {
+        samplesToDuplicate = sourceSampleNum / interval;
+    } else {
+        samplesToDuplicate = (sourceSampleNum/interval) + 1;
+    }
+    
+    destIndex = samplesToDuplicate * 2 + sourceSampleNum - samplesToDuplicate;
+    
+    return destIndex;
 }
