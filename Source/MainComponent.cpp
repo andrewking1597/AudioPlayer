@@ -2,8 +2,7 @@
 
 MainComponent::MainComponent() : state(Stopped)
 {
-    // Make sure you set the size of the component after
-    // you add any child components.
+    // set window size
     setSize (400, 400);
 
     // Some platforms require permissions to open input channels so request that here
@@ -19,6 +18,7 @@ MainComponent::MainComponent() : state(Stopped)
         setAudioChannels (2, 2);
     }
     
+    // Configure the GUI buttons
     addAndMakeVisible(&openButton);
     openButton.setButtonText("Open...");
     openButton.onClick = [this] { openButtonClicked(); };
@@ -27,7 +27,7 @@ MainComponent::MainComponent() : state(Stopped)
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
     playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
-//    playButton.setEnabled(false);
+    playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
     stopButton.setButtonText("Stop");
@@ -40,11 +40,6 @@ MainComponent::MainComponent() : state(Stopped)
     
     // listen for when the state of transport changes and call the changeListener callback function
     transport.addChangeListener(this);
-    
-    //TEMP
-    slowBuffer.clear();
-    //ENDTEMP
-    
 }
 
 MainComponent::~MainComponent()
@@ -52,6 +47,7 @@ MainComponent::~MainComponent()
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
     
+    // delete the reader pointer
     delete reader;
 }
 
@@ -63,11 +59,9 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Your audio-processing code goes here!
-    
-    // Right now we are not producing any data, in which case we need to clear the buffer
-    // (to prevent the output of random noise)
-    bufferToFill.clearActiveBufferRegion();
+//    // Right now we are not producing any data, in which case we need to clear the buffer
+//    // (to prevent the output of random noise)
+//    bufferToFill.clearActiveBufferRegion();
     
     transport.getNextAudioBlock(bufferToFill);
 }
@@ -81,16 +75,15 @@ void MainComponent::releaseResources()
 //==============================================================================
 void MainComponent::paint (juce::Graphics& g)
 {
-    // Completely fill the background with a solid color
+    // Give the window a black background
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
 void MainComponent::resized()
 {
-    // This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
+    // This is called when the window is resized
     
+    // Set position and size of the GUI buttons
     openButton.setBounds(125, 90, 150, 30);
     playButton.setBounds(125, 130, 150, 30);
     stopButton.setBounds(125, 170, 150, 30);
@@ -106,6 +99,8 @@ void MainComponent::openButtonClicked()
     // If the user chooses a file
     if (chooser.browseForFileToOpen())
     {
+        playButton.setEnabled(true);
+        
         // Get the chosen file
         juce::File loadedFile = chooser.getResult();
         // Read the file
@@ -120,18 +115,19 @@ void MainComponent::openButtonClicked()
         tempBuffer.setSize(2, (int) reader->lengthInSamples, false, true, false);
         tempBuffer.clear();
         
+        // read audio data into tempBuffer
         reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
         
         // copy each sample from tempBuffer to slowBuffer and duplicate every 8th sample
         for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
         {
             // calculate the index to write the sample and write the sample for each channel
-            int destSampleIX = getDestIndex(sourceSampleIX, 8);
+            int destSampleIX = getDestIndex(sourceSampleIX, 6);
             slowBuffer.setSample(0, destSampleIX, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
             slowBuffer.setSample(1, destSampleIX, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
 
             // if sourceSampleIX is a multiple of the interval: copy the samples to the next index also
-            if (sourceSampleIX % 8 == 0)
+            if (sourceSampleIX % 6 == 0)
             {
                 slowBuffer.setSample(0, destSampleIX+1, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
                 slowBuffer.setSample(1, destSampleIX+1, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
@@ -143,9 +139,9 @@ void MainComponent::openButtonClicked()
             std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
             // set transport source to the data that tempSource is pointing to
             transport.setSource(tempSource.get());
-            // change state to Stopped
+            
             transportStateChanged(Stopped);
-            // When the file is loaded, pass the data to self.playSource
+            // Pass the data to playSource and release leftover memory from tempSource
             playSource.reset(tempSource.release());
         }
 
