@@ -32,7 +32,7 @@ private:
     
     TransportState state; // Keeps track of the state of audio playback
     juce::AudioFormatManager formatManager; // Controls what audio formats are allowed (.wav and .aiff)
-    std::unique_ptr<juce::AudioFormatReaderSource> playSource; // plays data received from tempSource
+    std::unique_ptr<juce::MemoryAudioSource> playSource; // plays data received from tempSource
     juce::AudioTransportSource transport; // positionable audio playback object
     juce::AudioFormatReader* reader; // reads samples from audio file stream
     
@@ -52,6 +52,7 @@ private:
     void stopButtonClicked();
     void transportStateChanged(TransportState newState);
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    int getDestIndex(int sourceSampleNum, int interval);
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
