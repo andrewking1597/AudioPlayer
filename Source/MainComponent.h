@@ -36,12 +36,9 @@ private:
     juce::AudioTransportSource transport; // positionable audio playback object
     juce::AudioFormatReader* reader; // reads samples from audio file stream
     
-    //TEMP
-    juce::AudioBuffer<float> slowBuffer;
-    std::fstream f;
-    //ENDTEMP
+    juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
     
-    // Buttons
+    // GUI Buttons
     juce::TextButton openButton;
     juce::TextButton playButton;
     juce::TextButton stopButton;
@@ -52,7 +49,7 @@ private:
     void stopButtonClicked();
     void transportStateChanged(TransportState newState);
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-    int getDestIndex(int sourceSampleNum, int interval);
+    int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
