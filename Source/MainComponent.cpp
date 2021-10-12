@@ -35,6 +35,11 @@ MainComponent::MainComponent() : state(Stopped)
     stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     stopButton.setEnabled(false);
     
+    addAndMakeVisible(&pauseButton);
+    pauseButton.setButtonText("Pause");
+    pauseButton.onClick = [this] { pauseButtonClicked(); };
+    pauseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
+    
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
     
@@ -87,6 +92,7 @@ void MainComponent::resized()
     openButton.setBounds(125, 90, 150, 30);
     playButton.setBounds(125, 130, 150, 30);
     stopButton.setBounds(125, 170, 150, 30);
+    pauseButton.setBounds(125, 210, 150, 30);
 }
 
 //==============================================================================
@@ -166,33 +172,51 @@ void MainComponent::transportStateChanged(TransportState newState)
         
         switch (state) {
             case Stopped:
+                isPaused = false;
                 playButton.setEnabled(true);
                 transport.setPosition(0.0); // Set playhead at beginning of audio
                 break;
             case Starting:
+                isPaused = false;
                 stopButton.setEnabled(true);
                 playButton.setEnabled(false);
                 transport.start();
                 break;
             case Playing:
+                isPaused = false;
                 playButton.setEnabled(false);
                 stopButton.setEnabled(true);
                 break;
             case Stopping:
+                isPaused = false;
                 playButton.setEnabled(true);
                 stopButton.setEnabled(false);
                 transport.stop();
                 transport.setPosition(0.0); // Set playhead at beginning of audio
                 break;
+            case Paused:
+                isPaused = true;
+                playButton.setEnabled(true);
+                stopButton.setEnabled(true);
+                transport.stop();
+                break;
         }
     }
+}
+
+void MainComponent::pauseButtonClicked()
+{
+    transportStateChanged(Paused);
 }
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &transport)
     {
-        if (transport.isPlaying()) {
+        if (isPaused) {
+            transportStateChanged(Paused);
+        }
+        else if (transport.isPlaying()) {
             transportStateChanged(Playing);
         } else {
             transportStateChanged(Stopped);
