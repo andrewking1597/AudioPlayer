@@ -3,6 +3,10 @@
 #include <JuceHeader.h>
 #include <iostream>
 
+//#include "CustomLookAndFeel.h"
+//#include "RotarySlider.h"
+//#include "NameLabel.h"
+
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener
 {
 public:
@@ -20,6 +24,12 @@ public:
     void resized() override;
 
 private:
+    //==============================================================================
+//    NameLabel reverbLabel;
+//    RotarySlider reverbSlider;
+    
+    juce::Reverb::Parameters reverbParams{0.5f, 0.5f, 0.33f, 0.4f, 1.0f, 0.0f};
+    juce::Reverb reverb;
     //==============================================================================
     enum TransportState
     {
@@ -58,4 +68,3 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
-
