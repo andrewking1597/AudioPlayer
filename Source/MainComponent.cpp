@@ -3,7 +3,7 @@
 MainComponent::MainComponent() : state(Stopped)
 {
     // set window size
-    setSize (400, 400);
+    setSize (600, 400);
 
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
@@ -60,6 +60,10 @@ MainComponent::~MainComponent()
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     transport.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    
+    //==============================================================================
+    reverb.setSampleRate(sampleRate);
+    //==============================================================================
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -69,6 +73,14 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
 //    bufferToFill.clearActiveBufferRegion();
     
     transport.getNextAudioBlock(bufferToFill);
+    
+    //==============================================================================
+    // get pointer to each channel of buffer
+    float* left = bufferToFill.buffer->getWritePointer(0);
+    float* right = bufferToFill.buffer->getWritePointer(1);
+    // apply reverb
+    reverb.processStereo(left, right, bufferToFill.numSamples);
+    //==============================================================================
 }
 
 void MainComponent::releaseResources()
@@ -89,10 +101,10 @@ void MainComponent::resized()
     // This is called when the window is resized
     
     // Set position and size of the GUI buttons
-    openButton.setBounds(125, 90, 150, 30);
-    playButton.setBounds(125, 130, 150, 30);
-    stopButton.setBounds(125, 170, 150, 30);
-    pauseButton.setBounds(125, 210, 150, 30);
+    openButton.setBounds(100, 90, 150, 30);
+    playButton.setBounds(100, 130, 150, 30);
+    stopButton.setBounds(100, 170, 150, 30);
+    pauseButton.setBounds(100, 210, 150, 30);
 }
 
 //==============================================================================
@@ -145,7 +157,6 @@ void MainComponent::openButtonClicked()
             std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
             // set transport source to the data that tempSource is pointing to
             transport.setSource(tempSource.get());
-            
             transportStateChanged(Stopped);
             // Pass the data to playSource and release leftover memory from tempSource
             playSource.reset(tempSource.release());
@@ -238,3 +249,4 @@ int MainComponent::getDestIndex(int sourceSampleNum, int interval)
     
     return destIndex;
 }
+
