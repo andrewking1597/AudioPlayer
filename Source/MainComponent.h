@@ -3,11 +3,13 @@
 #include <JuceHeader.h>
 #include <iostream>
 
-//#include "CustomLookAndFeel.h"
-//#include "RotarySlider.h"
-//#include "NameLabel.h"
+//==============================================================================
+#include "CustomLookAndFeel.h"
+#include "RotarySlider.h"
+#include "NameLabel.h"
+//==============================================================================
 
-class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener
+class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener
 {
 public:
     //==============================================================================
@@ -25,12 +27,14 @@ public:
 
 private:
     //==============================================================================
-//    NameLabel reverbLabel;
-//    RotarySlider reverbSlider;
-    
-    juce::Reverb::Parameters reverbParams{0.5f, 0.5f, 0.33f, 0.4f, 1.0f, 0.0f};
-    juce::Reverb reverb;
+    CustomLookAndFeel customLookAndFeel;
+    NameLabel reverbLabel;
+    RotarySlider reverbSlider;
     //==============================================================================
+    
+    juce::Reverb::Parameters reverbParams{0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f};
+    juce::Reverb reverb;
+    
     enum TransportState
     {
         Stopped,
@@ -64,6 +68,7 @@ private:
     void transportStateChanged(TransportState newState);
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
+    void sliderValueChanged(juce::Slider* slider) override;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
