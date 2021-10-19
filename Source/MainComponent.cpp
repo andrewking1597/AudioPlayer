@@ -40,6 +40,16 @@ MainComponent::MainComponent() : state(Stopped)
     pauseButton.onClick = [this] { pauseButtonClicked(); };
     pauseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
     
+    //==============================================================================
+    addAndMakeVisible(reverbSlider);
+    reverbSlider.addListener(this);
+    reverbSlider.setValue(0.0f);
+    
+    addAndMakeVisible(reverbLabel);
+    reverbLabel.setText("Reverb", juce::dontSendNotification);
+    reverbLabel.attachToComponent(&reverbSlider, false);
+    //==============================================================================
+    
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
     
@@ -93,7 +103,8 @@ void MainComponent::releaseResources()
 void MainComponent::paint (juce::Graphics& g)
 {
     // Give the window a black background
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+//    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll (CustomLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
 void MainComponent::resized()
@@ -105,6 +116,10 @@ void MainComponent::resized()
     playButton.setBounds(100, 130, 150, 30);
     stopButton.setBounds(100, 170, 150, 30);
     pauseButton.setBounds(100, 210, 150, 30);
+    
+    //==============================================================================
+    reverbSlider.setBounds(300, 90, 100, 100);
+    //==============================================================================
 }
 
 //==============================================================================
@@ -250,3 +265,20 @@ int MainComponent::getDestIndex(int sourceSampleNum, int interval)
     return destIndex;
 }
 
+//==============================================================================
+void MainComponent::sliderValueChanged(juce::Slider* slider)
+{
+    if (slider == &reverbSlider)
+    {
+        float val = (float)reverbSlider.getValue();
+        // convert value to the range 0-1
+        val /= 100;
+        // set wet level to val
+        reverbParams.wetLevel = val;
+        // set dry level to 1-val
+        reverbParams.dryLevel = 1.0f - val;
+        
+        reverb.setParameters(reverbParams);
+    }
+}
+//==============================================================================
