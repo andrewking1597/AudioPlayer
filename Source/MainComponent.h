@@ -26,6 +26,7 @@ private:
         Stopped,
         Starting,
         Playing,
+        Paused,
         Stopping
     };
     
@@ -41,11 +42,15 @@ private:
     juce::TextButton openButton;
     juce::TextButton playButton;
     juce::TextButton stopButton;
+    juce::TextButton pauseButton;
+    
+    bool isPaused;
     
     //==============================================================================
     void openButtonClicked();
     void playButtonClicked();
     void stopButtonClicked();
+    void pauseButtonClicked();
     void transportStateChanged(TransportState newState);
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
@@ -53,3 +58,4 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
+
