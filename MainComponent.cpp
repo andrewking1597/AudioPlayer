@@ -50,15 +50,23 @@ MainComponent::MainComponent() : state(Stopped)
     reverbLabel.attachToComponent(&reverbSlider, false);
     
     //==============================================================================
+    addAndMakeVisible(&lockButton);
+    lockButton.setButtonText("Lock");
+    lockButton.onClick = [this] { lockButtonClicked(); };
+    lockButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
+    //==============================================================================
+    
     addAndMakeVisible(&slowSlider);
     slowSlider.addListener(this);
-    slowSlider.setRange(1, 10, 1);
+    slowSlider.setRange(0, 10, 1);
     slowSlider.setValue(0.0f);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
     slowLabel.attachToComponent(&slowSlider, false);
-    //==============================================================================
+    
+    slowLocked = false;
+    slowInterval = slowSlider.getMaximum() - slowSlider.getValue();
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
@@ -82,9 +90,7 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     transport.prepareToPlay(samplesPerBlockExpected, sampleRate);
     
     reverb.setSampleRate(sampleRate);
-    //==============================================================================
     reverb.setParameters(reverbParams);
-    //==============================================================================
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -125,6 +131,7 @@ void MainComponent::resized()
     pauseButton.setBounds(100, 210, 150, 30);
     reverbSlider.setBounds(300, 90, 100, 100);
     slowSlider.setBounds(450, 90, 100, 100);
+    lockButton.setBounds(460, 210, 80, 30);
 }
 
 //==============================================================================
@@ -208,6 +215,11 @@ void MainComponent::pauseButtonClicked()
     transportStateChanged(Paused);
 }
 
+void MainComponent::lockButtonClicked()
+{
+    return;
+}
+
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &transport)
@@ -255,13 +267,16 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
     
     else if (slider == &slowSlider)
     {
-        std::cout << "slow = " << slowSlider.getValue() << std::endl;
+        if (!slowLocked)
+        {
+            slowInterval = 10 - slowSlider.getValue();
+        }
     }
 }
 
 void MainComponent::slowAudio()
 {
-    int interval = 6;
+    int interval = 6; // interval between duplicated samples (in this case every 6th sample will be duplicated)
     
     // set slowBuffer's size to hold twice as many samples as reader
     slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
@@ -275,7 +290,7 @@ void MainComponent::slowAudio()
     // read audio data into tempBuffer
     reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
     
-    // copy each sample from tempBuffer to slowBuffer and duplicate every nth sample, where n is 10-slowValue
+    // copy each sample from tempBuffer to slowBuffer and duplicate every interval-th sample is duplicated
     for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
     {
         // calculate the index to write the sample and write the sample for each channel
@@ -292,12 +307,10 @@ void MainComponent::slowAudio()
     }
     
     if (reader != nullptr) {
-        // Get the file ready to play
+        // Pass the data to playSource
         std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
-        // set transport source to the data that tempSource is pointing to
-        transport.setSource(tempSource.get());
+        transport.setSource(tempSource.get()); // set transport source to the data that tempSource is pointing to
         transportStateChanged(Stopped);
-        // Pass the data to playSource and release leftover memory from tempSource
         playSource.reset(tempSource.release());
     }
     

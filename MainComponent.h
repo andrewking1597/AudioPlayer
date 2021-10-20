@@ -52,8 +52,11 @@ private:
     RotarySlider reverbSlider;
     NameLabel slowLabel;
     RotarySlider slowSlider;
+    juce::TextButton lockButton;
     
     bool isPaused;
+    int slowInterval;
+    bool slowLocked;
     
     //==============================================================================
     void openButtonClicked();
@@ -64,7 +67,7 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     void sliderValueChanged(juce::Slider* slider) override;
-    
+    void lockButtonClicked();
     void slowAudio();
     
     //==============================================================================
