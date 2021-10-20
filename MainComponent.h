@@ -40,7 +40,7 @@ private:
     juce::AudioFormatManager formatManager; // Controls what audio formats are allowed (.wav and .aiff)
     std::unique_ptr<juce::MemoryAudioSource> playSource; // plays data received from tempSource
     juce::AudioTransportSource transport; // positionable audio playback object
-    juce::AudioFormatReader* reader; // reads samples from audio file stream
+    std::unique_ptr<juce::AudioFormatReader> reader;
     juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
     
     // GUI controls

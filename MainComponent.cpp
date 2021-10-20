@@ -80,8 +80,8 @@ MainComponent::~MainComponent()
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
     
-    // delete the reader pointer
-    delete reader;
+//    // delete the reader pointer
+//    delete reader;
 }
 
 //==============================================================================
@@ -149,7 +149,7 @@ void MainComponent::openButtonClicked()
         // Get the chosen file
         juce::File loadedFile = chooser.getResult();
         // Read the file
-        reader = formatManager.createReaderFor(loadedFile);
+        reader.reset(formatManager.createReaderFor(loadedFile));
         
         slowAudio();
     }
