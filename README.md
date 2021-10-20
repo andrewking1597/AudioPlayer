@@ -1,2 +1,2 @@
 # AudioPlayer
-Audio file player that allows a user to load an audio file and use playback controls (start, pause, stop).
+Audio file player that allows user to control the playback speed and apply a reverb effect
