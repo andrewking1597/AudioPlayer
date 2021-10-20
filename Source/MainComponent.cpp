@@ -39,15 +39,25 @@ MainComponent::MainComponent() : state(Stopped)
     pauseButton.setButtonText("Pause");
     pauseButton.onClick = [this] { pauseButtonClicked(); };
     pauseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
+    pauseButton.setEnabled(false);
     
-    //==============================================================================
-    addAndMakeVisible(reverbSlider);
+    addAndMakeVisible(&reverbSlider);
     reverbSlider.addListener(this);
     reverbSlider.setValue(0.0f);
     
-    addAndMakeVisible(reverbLabel);
+    addAndMakeVisible(&reverbLabel);
     reverbLabel.setText("Reverb", juce::dontSendNotification);
     reverbLabel.attachToComponent(&reverbSlider, false);
+    
+    //==============================================================================
+    addAndMakeVisible(&slowSlider);
+    slowSlider.addListener(this);
+    slowSlider.setRange(1, 10, 1);
+    slowSlider.setValue(0.0f);
+    
+    addAndMakeVisible(&slowLabel);
+    slowLabel.setText("Slow", juce::dontSendNotification);
+    slowLabel.attachToComponent(&slowSlider, false);
     //==============================================================================
     
     // Configure formatManager to read wav and aiff files
@@ -71,8 +81,9 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 {
     transport.prepareToPlay(samplesPerBlockExpected, sampleRate);
     
-    //==============================================================================
     reverb.setSampleRate(sampleRate);
+    //==============================================================================
+    reverb.setParameters(reverbParams);
     //==============================================================================
 }
 
@@ -84,13 +95,11 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     
     transport.getNextAudioBlock(bufferToFill);
     
-    //==============================================================================
     // get pointer to each channel of buffer
     float* left = bufferToFill.buffer->getWritePointer(0);
     float* right = bufferToFill.buffer->getWritePointer(1);
     // apply reverb
     reverb.processStereo(left, right, bufferToFill.numSamples);
-    //==============================================================================
 }
 
 void MainComponent::releaseResources()
@@ -109,17 +118,13 @@ void MainComponent::paint (juce::Graphics& g)
 
 void MainComponent::resized()
 {
-    // This is called when the window is resized
-    
     // Set position and size of the GUI buttons
     openButton.setBounds(100, 90, 150, 30);
     playButton.setBounds(100, 130, 150, 30);
     stopButton.setBounds(100, 170, 150, 30);
     pauseButton.setBounds(100, 210, 150, 30);
-    
-    //==============================================================================
     reverbSlider.setBounds(300, 90, 100, 100);
-    //==============================================================================
+    slowSlider.setBounds(450, 90, 100, 100);
 }
 
 //==============================================================================
@@ -139,44 +144,7 @@ void MainComponent::openButtonClicked()
         // Read the file
         reader = formatManager.createReaderFor(loadedFile);
         
-        // set slowBuffer's size to hold twice as many samples as reader
-        slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
-        slowBuffer.clear();
-        
-        // tempBuffer to read the audio stream into
-        juce::AudioBuffer<float> tempBuffer; //todo use a pointer and then delete
-        tempBuffer.setSize(2, (int) reader->lengthInSamples, false, true, false);
-        tempBuffer.clear();
-        
-        // read audio data into tempBuffer
-        reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
-        
-        // copy each sample from tempBuffer to slowBuffer and duplicate every 8th sample
-        for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
-        {
-            // calculate the index to write the sample and write the sample for each channel
-            int destSampleIX = getDestIndex(sourceSampleIX, 6);
-            slowBuffer.setSample(0, destSampleIX, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
-            slowBuffer.setSample(1, destSampleIX, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
-
-            // if sourceSampleIX is a multiple of the interval: copy the samples to the next index also
-            if (sourceSampleIX % 6 == 0)
-            {
-                slowBuffer.setSample(0, destSampleIX+1, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
-                slowBuffer.setSample(1, destSampleIX+1, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
-            }
-        }
-
-        if (reader != nullptr) {
-            // Get the file ready to play
-            std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
-            // set transport source to the data that tempSource is pointing to
-            transport.setSource(tempSource.get());
-            transportStateChanged(Stopped);
-            // Pass the data to playSource and release leftover memory from tempSource
-            playSource.reset(tempSource.release());
-        }
-
+        slowAudio();
     }
 }
 
@@ -200,18 +168,21 @@ void MainComponent::transportStateChanged(TransportState newState)
             case Stopped:
                 isPaused = false;
                 playButton.setEnabled(true);
+                pauseButton.setEnabled(false);
                 transport.setPosition(0.0); // Set playhead at beginning of audio
                 break;
             case Starting:
                 isPaused = false;
                 stopButton.setEnabled(true);
                 playButton.setEnabled(false);
+                pauseButton.setEnabled(true);
                 transport.start();
                 break;
             case Playing:
                 isPaused = false;
                 playButton.setEnabled(false);
                 stopButton.setEnabled(true);
+                pauseButton.setEnabled(true);
                 break;
             case Stopping:
                 isPaused = false;
@@ -219,12 +190,14 @@ void MainComponent::transportStateChanged(TransportState newState)
                 stopButton.setEnabled(false);
                 transport.stop();
                 transport.setPosition(0.0); // Set playhead at beginning of audio
+                pauseButton.setEnabled(false);
                 break;
             case Paused:
                 isPaused = true;
                 playButton.setEnabled(true);
                 stopButton.setEnabled(true);
                 transport.stop();
+                pauseButton.setEnabled(false);
                 break;
         }
     }
@@ -265,7 +238,6 @@ int MainComponent::getDestIndex(int sourceSampleNum, int interval)
     return destIndex;
 }
 
-//==============================================================================
 void MainComponent::sliderValueChanged(juce::Slider* slider)
 {
     if (slider == &reverbSlider)
@@ -280,5 +252,55 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
         
         reverb.setParameters(reverbParams);
     }
+    
+    else if (slider == &slowSlider)
+    {
+        std::cout << "slow = " << slowSlider.getValue() << std::endl;
+    }
 }
-//==============================================================================
+
+void MainComponent::slowAudio()
+{
+    int interval = 6;
+    
+    // set slowBuffer's size to hold twice as many samples as reader
+    slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
+    slowBuffer.clear();
+    
+    // tempBuffer to read the audio stream into
+    juce::AudioBuffer<float> tempBuffer; //todo use a pointer and then delete
+    tempBuffer.setSize(2, (int) reader->lengthInSamples, false, true, false);
+    tempBuffer.clear();
+    
+    // read audio data into tempBuffer
+    reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
+    
+    // copy each sample from tempBuffer to slowBuffer and duplicate every nth sample, where n is 10-slowValue
+    for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
+    {
+        // calculate the index to write the sample and write the sample for each channel
+        int destSampleIX = getDestIndex(sourceSampleIX, interval);
+        slowBuffer.setSample(0, destSampleIX, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
+        slowBuffer.setSample(1, destSampleIX, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
+
+        // if sourceSampleIX is a multiple of the interval: copy the samples to the next index also
+        if (sourceSampleIX % interval == 0)
+        {
+            slowBuffer.setSample(0, destSampleIX+1, tempBuffer.getSample(0, sourceSampleIX)); // channel 0
+            slowBuffer.setSample(1, destSampleIX+1, tempBuffer.getSample(1, sourceSampleIX)); // channel 1
+        }
+    }
+    
+    if (reader != nullptr) {
+        // Get the file ready to play
+        std::unique_ptr<juce::MemoryAudioSource> tempSource(new juce::MemoryAudioSource(slowBuffer, false));
+        // set transport source to the data that tempSource is pointing to
+        transport.setSource(tempSource.get());
+        transportStateChanged(Stopped);
+        // Pass the data to playSource and release leftover memory from tempSource
+        playSource.reset(tempSource.release());
+    }
+    
+    
+    return;
+}

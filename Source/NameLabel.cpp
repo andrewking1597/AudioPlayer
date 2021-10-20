@@ -9,4 +9,5 @@ NameLabel::NameLabel()
 
 NameLabel::~NameLabel()
 {
+    setLookAndFeel(nullptr);
 }

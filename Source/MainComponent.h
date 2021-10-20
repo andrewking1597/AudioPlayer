@@ -2,12 +2,9 @@
 
 #include <JuceHeader.h>
 #include <iostream>
-
-//==============================================================================
 #include "CustomLookAndFeel.h"
 #include "RotarySlider.h"
 #include "NameLabel.h"
-//==============================================================================
 
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener
 {
@@ -26,12 +23,7 @@ public:
     void resized() override;
 
 private:
-    //==============================================================================
     CustomLookAndFeel customLookAndFeel;
-    NameLabel reverbLabel;
-    RotarySlider reverbSlider;
-    //==============================================================================
-    
     juce::Reverb::Parameters reverbParams{0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f};
     juce::Reverb reverb;
     
@@ -49,14 +41,17 @@ private:
     std::unique_ptr<juce::MemoryAudioSource> playSource; // plays data received from tempSource
     juce::AudioTransportSource transport; // positionable audio playback object
     juce::AudioFormatReader* reader; // reads samples from audio file stream
-    
     juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
     
-    // GUI Buttons
+    // GUI controls
     juce::TextButton openButton;
     juce::TextButton playButton;
     juce::TextButton stopButton;
     juce::TextButton pauseButton;
+    NameLabel reverbLabel;
+    RotarySlider reverbSlider;
+    NameLabel slowLabel;
+    RotarySlider slowSlider;
     
     bool isPaused;
     
@@ -69,6 +64,8 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     void sliderValueChanged(juce::Slider* slider) override;
+    
+    void slowAudio();
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
