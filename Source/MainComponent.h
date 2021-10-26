@@ -29,18 +29,17 @@ private:
     
     enum TransportState
     {
+        NoFile,
         Stopped,
-        Starting,
         Playing,
-        Paused,
-        Stopping
+        Paused
     };
     
     TransportState state; // Keeps track of the state of audio playback
     juce::AudioFormatManager formatManager; // Controls what audio formats are allowed (.wav and .aiff)
     std::unique_ptr<juce::MemoryAudioSource> playSource; // plays data received from tempSource
     juce::AudioTransportSource transport; // positionable audio playback object
-    juce::AudioFormatReader* reader; // reads samples from audio file stream
+    std::unique_ptr<juce::AudioFormatReader> reader;
     juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
     
     // GUI controls
@@ -52,8 +51,11 @@ private:
     RotarySlider reverbSlider;
     NameLabel slowLabel;
     RotarySlider slowSlider;
+    juce::TextButton lockButton;
     
     bool isPaused;
+    int slowInterval;
+    bool slowLocked;
     
     //==============================================================================
     void openButtonClicked();
@@ -64,8 +66,15 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     void sliderValueChanged(juce::Slider* slider) override;
-    
+    void lockButtonClicked();
     void slowAudio();
+    
+    juce::Colour blue = juce::Colour::fromFloatRGBA(0.43f, 0.83f, 1.0f, 1.0f);
+    juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
+    juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
+    juce::Colour offWhite = juce::Colour::fromFloatRGBA(0.83f, 0.84f, 0.9f, 1.0f);
+    juce::Colour mint = juce::Colour::fromFloatRGBA(0.54f, 1.0f, 0.76f, 1.0f);
+    juce::Colour fireRed = juce::Colour::fromFloatRGBA(0.93f, 0.38f, 0.33f, 1.0f);
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
