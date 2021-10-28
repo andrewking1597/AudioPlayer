@@ -19,6 +19,10 @@ MainComponent::MainComponent() : state(NoFile)
     }
     
     // Configure the GUI buttons
+    addAndMakeVisible(&titleLabel);
+    titleLabel.setText("Slow + Reverb", juce::dontSendNotification);
+    titleLabel.setFont(50.f);
+    
     addAndMakeVisible(&openButton);
     openButton.setButtonText("Open...");
     openButton.onClick = [this] { openButtonClicked(); };
@@ -26,7 +30,7 @@ MainComponent::MainComponent() : state(NoFile)
     addAndMakeVisible(&playButton);
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, mint);
+    playButton.setColour(juce::TextButton::buttonColourId, abkGreen);
     playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
@@ -41,27 +45,32 @@ MainComponent::MainComponent() : state(NoFile)
     pauseButton.setColour(juce::TextButton::buttonColourId, blue);
     pauseButton.setEnabled(false);
     
-    addAndMakeVisible(&reverbSlider);
-    reverbSlider.addListener(this);
-    reverbSlider.setValue(0.0f);
-    
     addAndMakeVisible(&reverbLabel);
     reverbLabel.setText("Reverb", juce::dontSendNotification);
     reverbLabel.attachToComponent(&reverbSlider, false);
     
-    addAndMakeVisible(&setButton);
-    setButton.setButtonText("Set");
-    setButton.onClick = [this] { setButtonClicked(); };
-    setButton.setColour(juce::TextButton::buttonColourId, blue);
-    setButton.setEnabled(false);
-    
-    addAndMakeVisible(&slowSlider);
-    slowSlider.addListener(this);
-    slowSlider.setValue(0.0f);
+    addAndMakeVisible(&reverbSlider);
+    reverbSlider.addListener(this);
+    reverbSlider.setValue(0.0f);
+    reverbSlider.setPathColor(abkGreen);
+    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
     slowLabel.attachToComponent(&slowSlider, false);
+    
+    addAndMakeVisible(&slowSlider);
+    slowSlider.addListener(this);
+    slowSlider.setValue(0.0f);
+    slowSlider.setPathColor(abkPink);
+    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
+    
+    addAndMakeVisible(&setButton);
+    setButton.setButtonText("Set");
+    setButton.onClick = [this] { setButtonClicked(); };
+    setButton.setColour(juce::TextButton::buttonColourId, abkPink);
+    setButton.setEnabled(false);
+    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
@@ -114,14 +123,15 @@ void MainComponent::paint (juce::Graphics& g)
 
 void MainComponent::resized()
 {
-    // Set position and size of the GUI buttons
-    openButton.setBounds(100, 90, 150, 30);
-    playButton.setBounds(100, 130, 150, 30);
-    stopButton.setBounds(100, 170, 150, 30);
-    pauseButton.setBounds(100, 210, 150, 30);
-    reverbSlider.setBounds(300, 90, 100, 100);
-    slowSlider.setBounds(450, 90, 100, 100);
-    setButton.setBounds(460, 210, 80, 30);
+    titleLabel.setBounds(0, 0, getWidth(), 120);
+    
+    openButton.setBounds(60, 140, 150, 30); // (75, 150) w = 150, h = 30
+    playButton.setBounds(60, 180, 70, 30); // (75, 190) w = 70, h = 30
+    pauseButton.setBounds(140, 180, 70, 30); // (155, 190) w = 70, h = 30
+    stopButton.setBounds(60, 220, 150, 30); // (75, 230) w = 150, h = 30
+    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
+    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
+    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
 }
 
 //==============================================================================
