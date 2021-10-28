@@ -15,7 +15,7 @@ RotarySlider::RotarySlider()
     setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     setTextBoxStyle(juce::Slider::TextBoxBelow, true, 0, 0);
     setLookAndFeel(&customLookAndFeel);
-    setColour(juce::Slider::rotarySliderFillColourId, blue);
+    setColour(juce::Slider::rotarySliderFillColourId, offWhite);
     setColour(juce::Slider::textBoxTextColourId, blackGrey);
     setColour(juce::Slider::textBoxOutlineColourId, grey);
     setVelocityBasedMode(true);
@@ -80,4 +80,9 @@ void RotarySlider::mouseUp(const juce::MouseEvent& event)
     juce::Slider::mouseUp(event);
     juce::Desktop::getInstance().getMainMouseSource().setScreenPosition(event.source.getLastMouseDownPosition());
     setMouseCursor(juce::MouseCursor::NormalCursor);
+}
+
+void RotarySlider::setPathColor(juce::Colour color)
+{
+    setColour(juce::Slider::rotarySliderFillColourId, color);
 }
