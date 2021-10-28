@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile), slowLocked(false)
+MainComponent::MainComponent() : state(NoFile)
 {
     // set window size
     setSize (600, 400);
@@ -49,28 +49,25 @@ MainComponent::MainComponent() : state(NoFile), slowLocked(false)
     reverbLabel.setText("Reverb", juce::dontSendNotification);
     reverbLabel.attachToComponent(&reverbSlider, false);
     
-    addAndMakeVisible(&lockButton);
-    lockButton.setButtonText("Lock");
-    lockButton.onClick = [this] { lockButtonClicked(); };
-    lockButton.setColour(juce::TextButton::buttonColourId, blue);
-    lockButton.setEnabled(false);
+    addAndMakeVisible(&setButton);
+    setButton.setButtonText("Set");
+    setButton.onClick = [this] { setButtonClicked(); };
+    setButton.setColour(juce::TextButton::buttonColourId, blue);
+    setButton.setEnabled(false);
     
     addAndMakeVisible(&slowSlider);
     slowSlider.addListener(this);
-    slowSlider.setRange(0, 10, 1);
     slowSlider.setValue(0.0f);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
     slowLabel.attachToComponent(&slowSlider, false);
     
-    slowInterval = slowSlider.getMaximum() - slowSlider.getValue();
-    
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
     
-//    // listen for when the state of transport changes and call the changeListener callback function
-//    transport.addChangeListener(this);
+    // listen for when the state of transport changes and call the changeListener callback function
+    transport.addChangeListener(this);
     
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
@@ -93,10 +90,6 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-//    // Right now we are not producing any data, in which case we need to clear the buffer
-//    // (to prevent the output of random noise)
-//    bufferToFill.clearActiveBufferRegion();
-    
     transport.getNextAudioBlock(bufferToFill);
     
     // get pointer to each channel of buffer
@@ -115,7 +108,6 @@ void MainComponent::releaseResources()
 //==============================================================================
 void MainComponent::paint (juce::Graphics& g)
 {
-    // Give the window a black background
 //    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
     g.fillAll (CustomLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
@@ -129,7 +121,7 @@ void MainComponent::resized()
     pauseButton.setBounds(100, 210, 150, 30);
     reverbSlider.setBounds(300, 90, 100, 100);
     slowSlider.setBounds(450, 90, 100, 100);
-    lockButton.setBounds(460, 210, 80, 30);
+    setButton.setBounds(460, 210, 80, 30);
 }
 
 //==============================================================================
@@ -147,10 +139,7 @@ void MainComponent::openButtonClicked()
         // Read the file
         reader.reset(formatManager.createReaderFor(loadedFile));
         
-        slowLocked = false;
         transportStateChanged(Stopped);
-        
-        slowAudio(); //todo move to the end of lockButtonClicked() or the beginning of Playing state
     }
 }
 
@@ -170,51 +159,36 @@ void MainComponent::transportStateChanged(TransportState newState)
     
     switch (state) {
         case NoFile:
+            isPaused = false;
             playButton.setEnabled(false);
             stopButton.setEnabled(false);
             pauseButton.setEnabled(false);
-            lockButton.setEnabled(false);
-            lockButton.setButtonText("Lock");
+            setButton.setEnabled(false);
             break;
         case Stopped:
+            isPaused = false;
             transport.stop();
             transport.setPosition(0.0);
             stopButton.setEnabled(false);
             pauseButton.setEnabled(false);
-            if (slowLocked)
-            {
-                pauseButton.setEnabled(false);
-                //todo? disable slowSlider
-                playButton.setEnabled(true);
-                lockButton.setEnabled(true);
-                lockButton.setButtonText("Unlock");
-                //todo slow the audio
-            }
-            else
-            {
-                playButton.setEnabled(false);
-                //todo? enable slowSlider
-                lockButton.setEnabled(true);
-                lockButton.setButtonText("Lock");
-            }
+            playButton.setEnabled(true);
+            setButton.setEnabled(true);
             break;
         case Playing:
+            isPaused = false;
             playButton.setEnabled(false);
-            //todo? disable slowSlider
-            lockButton.setEnabled(false);
-            lockButton.setButtonText("Unlock");
+            setButton.setEnabled(false);
             stopButton.setEnabled(true);
             pauseButton.setEnabled(true);
             transport.start();
             break;
         case Paused:
+            isPaused = true;
+            transport.stop();
             pauseButton.setEnabled(false);
-            //todo? disable slowSlider
-            lockButton.setEnabled(false); //todo later change this so speed can be changed if audio is paused
-            lockButton.setButtonText("Unlock");
             playButton.setEnabled(true);
             stopButton.setEnabled(true);
-            transport.stop();
+            setButton.setEnabled(true);
             break;
     }
 }
@@ -224,19 +198,21 @@ void MainComponent::pauseButtonClicked()
     transportStateChanged(Paused);
 }
 
-void MainComponent::lockButtonClicked()
+void MainComponent::setButtonClicked()
 {
-    if (!slowLocked)
+    int newInterval = reader->lengthInSamples / (reader->lengthInSamples * slowSlider.getValue() / 100);
+    
+    // if slider set to 0: set interval to be greater than numSamples so audio won't be slowed at all
+    if (slowSlider.getValue() == 0)
     {
-        slowLocked = true;
-        transportStateChanged(Stopped);
+        newInterval = (float)reader->lengthInSamples + 1;
     }
-    else
+    
+    if (newInterval != slowInterval)
     {
-        slowLocked = false;
-        transportStateChanged(Stopped);
+        slowInterval = newInterval;
+        slowAudio(slowInterval);
     }
-    return;
 }
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
@@ -248,6 +224,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         }
         else if (transport.isPlaying()) {
             transportStateChanged(Playing);
+            isPaused = false; // just in case
         } else {
             transportStateChanged(Stopped);
         }
@@ -283,20 +260,10 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
         
         reverb.setParameters(reverbParams);
     }
-    
-    else if (slider == &slowSlider)
-    {
-        if (!slowLocked)
-        {
-            slowInterval = 10 - slowSlider.getValue();
-        }
-    }
 }
 
-void MainComponent::slowAudio()
+void MainComponent::slowAudio(int interval)
 {
-    int interval = 6; // interval between duplicated samples (in this case every 6th sample will be duplicated)
-    
     // set slowBuffer's size to hold twice as many samples as reader
     slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
     slowBuffer.clear();
