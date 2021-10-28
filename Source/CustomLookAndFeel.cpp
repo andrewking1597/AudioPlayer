@@ -66,9 +66,8 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     
     g.strokePath(valueArc, juce::PathStrokeType(lineW, juce::PathStrokeType::beveled, juce::PathStrokeType::butt));
     
-//    auto alpha = 0.1f + (float) slider.getValue() * 0.9f;
-    auto alpha = 0.1f + (float) slider.getValue() * 0.009f;
-    auto brightness = 0.4f + (float) slider.getValue() * 0.6f;
+    auto alpha = 0.1f + (float) slider.getValue() * 0.9f / (float) slider.getMaximum();
+    auto brightness = 0.4f + (float) slider.getValue() * 0.6f / (float) slider.getMaximum();
 
     g.setColour(fill.withAlpha(alpha).brighter(brightness));
     g.strokePath(valueArc, juce::PathStrokeType(lineW, juce::PathStrokeType::beveled, juce::PathStrokeType::butt));

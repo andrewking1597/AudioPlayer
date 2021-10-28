@@ -3,7 +3,7 @@
 NameLabel::NameLabel()
 {
     setFont(20.f);
-    setColour(juce::Label::textColourId, grey);
+    setColour(juce::Label::textColourId, offWhite);
     setJustificationType(juce::Justification::centred);
 }
 

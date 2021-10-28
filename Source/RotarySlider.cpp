@@ -25,7 +25,7 @@ RotarySlider::RotarySlider()
                         juce::MathConstants<float>::pi * 2.75f,
                         true);
     setWantsKeyboardFocus(true);
-//    setTextValueSuffix(" %");
+    setTextValueSuffix("%");
     
     // When the value is changed, update the number of
     // decimal places to display
