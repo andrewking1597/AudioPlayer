@@ -26,6 +26,8 @@ private:
     CustomLookAndFeel customLookAndFeel;
     juce::Reverb::Parameters reverbParams{0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f};
     juce::Reverb reverb;
+    bool isPaused;
+    int slowInterval;
     
     enum TransportState
     {
@@ -51,11 +53,7 @@ private:
     RotarySlider reverbSlider;
     NameLabel slowLabel;
     RotarySlider slowSlider;
-    juce::TextButton lockButton;
-    
-    bool isPaused;
-    int slowInterval;
-    bool slowLocked;
+    juce::TextButton setButton;
     
     //==============================================================================
     void openButtonClicked();
@@ -66,8 +64,8 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     void sliderValueChanged(juce::Slider* slider) override;
-    void lockButtonClicked();
-    void slowAudio();
+    void setButtonClicked();
+    void slowAudio(int interval=0);
     
     juce::Colour blue = juce::Colour::fromFloatRGBA(0.43f, 0.83f, 1.0f, 1.0f);
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
