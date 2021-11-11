@@ -31,19 +31,19 @@ MainComponent::MainComponent() : state(NoFile)
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
     playButton.setColour(juce::TextButton::buttonColourId, abkGreen);
-//    playButton.setEnabled(false);
+    playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
     stopButton.setButtonText("Stop");
     stopButton.onClick = [this] { stopButtonClicked(); };
     stopButton.setColour(juce::TextButton::buttonColourId, fireRed);
-//    stopButton.setEnabled(false);
+    stopButton.setEnabled(false);
     
     addAndMakeVisible(&pauseButton);
     pauseButton.setButtonText("Pause");
     pauseButton.onClick = [this] { pauseButtonClicked(); };
     pauseButton.setColour(juce::TextButton::buttonColourId, blue);
-//    pauseButton.setEnabled(false);
+    pauseButton.setEnabled(false);
     
     addAndMakeVisible(&reverbLabel);
     reverbLabel.setText("Reverb", juce::dontSendNotification);
@@ -69,7 +69,7 @@ MainComponent::MainComponent() : state(NoFile)
     setButton.setButtonText("Set");
     setButton.onClick = [this] { setButtonClicked(); };
     setButton.setColour(juce::TextButton::buttonColourId, abkPink);
-//    setButton.setEnabled(false);
+    setButton.setEnabled(false);
     setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
     
     // Configure formatManager to read wav and aiff files
@@ -80,8 +80,6 @@ MainComponent::MainComponent() : state(NoFile)
     
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
-    
-//    std::cout << "MAIN THREAD: " << juce::Thread::getCurrentThreadId() << std::endl;
 }
 
 MainComponent::~MainComponent()
@@ -93,8 +91,6 @@ MainComponent::~MainComponent()
 //==============================================================================
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-//    std::cout << "PREP THREAD: " << juce::Thread::getCurrentThreadId() << std::endl;
-    
     transport.prepareToPlay(samplesPerBlockExpected, sampleRate);
     
     reverb.setSampleRate(sampleRate);
@@ -103,14 +99,13 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-//    std::cout << "PROC THREAD: " << juce::Thread::getCurrentThreadId() << std::endl;
-    transport.getNextAudioBlock(bufferToFill); //CS bufferToFill (reading transport)
+    transport.getNextAudioBlock(bufferToFill);
     
     // get pointer to each channel of buffer
-    float* left = bufferToFill.buffer->getWritePointer(0); //CS bufferToFill
-    float* right = bufferToFill.buffer->getWritePointer(1); //CS bufferToFill
+    float* left = bufferToFill.buffer->getWritePointer(0);
+    float* right = bufferToFill.buffer->getWritePointer(1);
     // apply reverb
-    reverb.processStereo(left, right, bufferToFill.numSamples); //CS bufferToFill
+    reverb.processStereo(left, right, bufferToFill.numSamples);
     
     //==============================================================================
     // if stream is finished: set transportState to Stopped
@@ -254,7 +249,6 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
             transportStateChanged(Playing);
             isPaused = false; // just in case
         } else {
-//            DBG("DONE-->STOP!");
             transportStateChanged(Stopped);
         }
     }
