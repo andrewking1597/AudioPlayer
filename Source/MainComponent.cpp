@@ -113,18 +113,15 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     reverb.processStereo(left, right, bufferToFill.numSamples); //CS bufferToFill
     
     //==============================================================================
-    //todo if stream is finished: set transportState to Stopped
+    // if stream is finished: set transportState to Stopped
     if (transport.getCurrentPosition() >= transport.getLengthInSeconds() && transport.getCurrentPosition() > 0)
     {
-        DBG("STREAM HAS ENDED!!!");
-        const juce::MessageManagerLock mmLock; // acquire access to the message thread
-                                               // before writing to shared resources
-                                               // note: will automatically free the lock
-                                               // when it goes out of scope
-        state = Stopped;
-        isPaused = false;
-        transport.stop();
-        transport.setPosition(0.0);
+        const juce::MessageManagerLock mmLock; // acquire access to the message thread before calling component methods
+                                               // note: will automatically free the lock when it goes out of scope
+        if (mmLock.lockWasGained())
+        {
+            transportStateChanged(Stopped);
+        }
     }
     //==============================================================================
 }
@@ -186,44 +183,40 @@ void MainComponent::stopButtonClicked()
 
 void MainComponent::transportStateChanged(TransportState newState)
 {
-    //todo   had to leave all buttons enabled regardless of state
-    //todo   need to make sure user is allowed to click buttons
-    //todo   before calling the onClick callback methods
-    
     state = newState;
     
     switch (state) {
         case NoFile:
             isPaused = false;
-//            playButton.setEnabled(false);
-//            stopButton.setEnabled(false);
-//            pauseButton.setEnabled(false);
-//            setButton.setEnabled(false);
+            playButton.setEnabled(false);
+            stopButton.setEnabled(false);
+            pauseButton.setEnabled(false);
+            setButton.setEnabled(false);
             break;
         case Stopped:
             isPaused = false;
             transport.stop();
             transport.setPosition(0.0);
-//            stopButton.setEnabled(false);
-//            pauseButton.setEnabled(false);
-//            playButton.setEnabled(true);
-//            setButton.setEnabled(true);
+            stopButton.setEnabled(false);
+            pauseButton.setEnabled(false);
+            playButton.setEnabled(true);
+            setButton.setEnabled(true);
             break;
         case Playing:
             isPaused = false;
-//            playButton.setEnabled(false);
-//            setButton.setEnabled(false);
-//            stopButton.setEnabled(true);
-//            pauseButton.setEnabled(true);
+            playButton.setEnabled(false);
+            setButton.setEnabled(false);
+            stopButton.setEnabled(true);
+            pauseButton.setEnabled(true);
             transport.start();
             break;
         case Paused:
             isPaused = true;
             transport.stop();
-//            pauseButton.setEnabled(false);
-//            playButton.setEnabled(true);
-//            stopButton.setEnabled(true);
-//            setButton.setEnabled(true);
+            pauseButton.setEnabled(false);
+            playButton.setEnabled(true);
+            stopButton.setEnabled(true);
+            setButton.setEnabled(true);
             break;
     }
 }
@@ -300,8 +293,7 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
 
 void MainComponent::slowAudio(int interval)
 {
-//    // set slowBuffer's size to hold twice as many samples as reader
-//    slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
+    // set slowBuffer's size to hold enough samples for the slowed audio
     slowBuffer.setSize(2, 1 + (int)reader->lengthInSamples + (int)reader->lengthInSamples / interval, false, true, false);
     slowBuffer.clear(); //todo unnecessary bc clearExtraSpace is set to true in the setSize call =============A
     
@@ -340,3 +332,4 @@ void MainComponent::slowAudio(int interval)
     
     return;
 }
+
