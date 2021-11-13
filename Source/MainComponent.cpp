@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile)
+MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel)
 {
     // set window size
     setSize (600, 400);
@@ -30,19 +30,19 @@ MainComponent::MainComponent() : state(NoFile)
     addAndMakeVisible(&playButton);
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, abkGreen);
+    playButton.setColour(juce::TextButton::buttonColourId, offWhite);
     playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
     stopButton.setButtonText("Stop");
     stopButton.onClick = [this] { stopButtonClicked(); };
-    stopButton.setColour(juce::TextButton::buttonColourId, fireRed);
+    stopButton.setColour(juce::TextButton::buttonColourId, offWhite);
     stopButton.setEnabled(false);
     
     addAndMakeVisible(&pauseButton);
     pauseButton.setButtonText("Pause");
     pauseButton.onClick = [this] { pauseButtonClicked(); };
-    pauseButton.setColour(juce::TextButton::buttonColourId, blue);
+    pauseButton.setColour(juce::TextButton::buttonColourId, offWhite);
     pauseButton.setEnabled(false);
     
     addAndMakeVisible(&reverbLabel);
@@ -53,7 +53,6 @@ MainComponent::MainComponent() : state(NoFile)
     reverbSlider.addListener(this);
     reverbSlider.setValue(0.0f);
     reverbSlider.setPathColor(abkGreen);
-    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
@@ -63,14 +62,12 @@ MainComponent::MainComponent() : state(NoFile)
     slowSlider.addListener(this);
     slowSlider.setValue(0.0f);
     slowSlider.setPathColor(abkPink);
-    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
     
     addAndMakeVisible(&setButton);
     setButton.setButtonText("Set");
     setButton.onClick = [this] { setButtonClicked(); };
     setButton.setColour(juce::TextButton::buttonColourId, abkPink);
     setButton.setEnabled(false);
-    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
@@ -80,6 +77,13 @@ MainComponent::MainComponent() : state(NoFile)
     
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
+    
+    //==============================================================================
+    queueModel.addItem("TestOne");
+    queueModel.addItem("TestTwo");
+    queueDisplay.updateContent();
+    addAndMakeVisible(&queueDisplay);
+    //==============================================================================
 }
 
 MainComponent::~MainComponent()
@@ -138,13 +142,16 @@ void MainComponent::resized()
 {
     titleLabel.setBounds(0, 0, getWidth(), 120);
     
-    openButton.setBounds(60, 140, 150, 30); // (75, 150) w = 150, h = 30
-    playButton.setBounds(60, 180, 70, 30); // (75, 190) w = 70, h = 30
-    pauseButton.setBounds(140, 180, 70, 30); // (155, 190) w = 70, h = 30
-    stopButton.setBounds(60, 220, 150, 30); // (75, 230) w = 150, h = 30
-    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
-    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
-    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
+    openButton.setBounds(40, 140, 150, 30); // (75, 150) w = 150, h = 30
+    queueDisplay.setBounds(40, 185, 150, 100);
+    
+    reverbSlider.setBounds(223, 163 + reverbLabel.getHeight()*0.5, 100, 100);
+    slowSlider.setBounds(356, 163 + slowLabel.getHeight()*0.5, 100, 100);
+    setButton.setBounds(366, 284 + slowLabel.getHeight()*0.5, 80, 25);
+    
+    playButton.setBounds(489, 153, 70, 30); // (75, 190) w = 70, h = 30
+    pauseButton.setBounds(489, 198, 70, 30); // (155, 190) w = 70, h = 30
+    stopButton.setBounds(489, 243, 70, 30); // (75, 230) w = 150, h = 30
 }
 
 //==============================================================================
@@ -326,4 +333,5 @@ void MainComponent::slowAudio(int interval)
     
     return;
 }
+
 
