@@ -105,3 +105,4 @@ juce::Font CustomLookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHei
 void CustomLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
 }
+
