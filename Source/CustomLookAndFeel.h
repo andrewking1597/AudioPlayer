@@ -49,5 +49,8 @@ private:
     juce::Colour abkPink = juce::Colour::fromRGB(212, 17, 208);
     juce::Colour abkPurple = juce::Colour::fromRGB(61, 20, 245);
     
+    juce::Colour offWhite2 = juce::Colour::fromRGB(229, 229, 229);
+    juce::Colour abkLightGrey = juce::Colour::fromRGB(204, 204, 204);
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CustomLookAndFeel);
 };
