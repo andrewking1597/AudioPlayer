@@ -5,6 +5,7 @@
 #include "CustomLookAndFeel.h"
 #include "RotarySlider.h"
 #include "NameLabel.h"
+#include "QueueModel.h"
 
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener
 {
@@ -68,6 +69,11 @@ private:
     void setButtonClicked();
     void slowAudio(int interval=0);
     
+    //==============================================================================
+    QueueModel queueModel;
+    juce::ListBox queueDisplay;
+    //==============================================================================
+    
     juce::Colour blue = juce::Colour::fromFloatRGBA(0.43f, 0.83f, 1.0f, 1.0f);
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
     juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
@@ -81,6 +87,9 @@ private:
     juce::Colour abkPeach = juce::Colour::fromRGB(247, 178, 183);
     juce::Colour abkPink = juce::Colour::fromRGB(212, 17, 208);
     juce::Colour abkPurple = juce::Colour::fromRGB(61, 20, 245);
+    
+    juce::Colour offWhite2 = juce::Colour::fromRGB(229, 229, 229);
+    juce::Colour abkLightGrey = juce::Colour::fromRGB(204, 204, 204);
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
