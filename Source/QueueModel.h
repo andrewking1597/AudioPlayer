@@ -12,7 +12,6 @@
 
 #include <string>
 #include <vector>
-//#include <queue>
 #include <JuceHeader.h>
 #include "CustomLookAndFeel.h"
 
@@ -21,10 +20,13 @@ class QueueModel : public juce::ListBoxModel
 public:
     int getNumRows() override;
     void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
-    void addItem(std::string filePath);
-    std::string popNext(int index);
+    void addItem(juce::File file);
+    void addItem(juce::String absolutePath);
+    juce::File popHead();
+    juce::File getHead();
+    juce::File* getHeadPtr();
 private:
-    std::vector<std::string> filePaths;
+    std::vector<juce::File> files;
     
     juce::Colour blue = juce::Colour::fromFloatRGBA(0.43f, 0.83f, 1.0f, 1.0f);
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
