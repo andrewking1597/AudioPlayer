@@ -10,39 +10,44 @@
 
 #include "QueueModel.h"
 
-int QueueModel::getNumRows()
-{
-    return (int)filePaths.size();
+int QueueModel::getNumRows() {
+    return (int)files.size();
 }
 
 void QueueModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
 {
-//    g.fillAll(juce::Colours::dimgrey);
-    
-    if (rowIsSelected) {
+    if (rowIsSelected || rowNumber == 0) {
         g.fillAll(offWhite);
-    }
-    // else if not selected: use alternating colors
-    else if (rowNumber % 2 == 0) {
-        g.fillAll(abkLightGrey);
     } else {
         g.fillAll(offWhite2);
     }
     
-    juce::String someData = filePaths[rowNumber];
+    juce::String fname = files[rowNumber].getFileNameWithoutExtension();
     g.setColour (juce::Colours::black);
-    g.drawText (someData, 4, 0, width - 4, height, juce::Justification::centredLeft, true);
+    g.drawText (fname, 4, 0, width - 4, height, juce::Justification::centredLeft, true);
 }
 
-void QueueModel::addItem(std::string filePath)
-{
-    filePaths.push_back(filePath);
+void QueueModel::addItem(juce::File file) {
+    files.push_back(file);
     return;
 }
 
-std::string QueueModel::popNext(int index)
-{
-    std::string temp = filePaths.at(index);
-    filePaths.erase(filePaths.begin());
+void QueueModel::addItem(juce::String absolutePath) {
+    juce::File temp(absolutePath);
+    files.push_back(temp);
+    return;
+}
+
+juce::File QueueModel::popHead() {
+    juce::File temp = files.at(0);
+    files.erase(files.begin());
     return temp;
+}
+
+juce::File QueueModel::getHead() {
+    return files.at(0);
+}
+
+juce::File* QueueModel::getHeadPtr() {
+    return &files.at(0);
 }
