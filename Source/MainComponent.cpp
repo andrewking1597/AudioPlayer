@@ -71,19 +71,12 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
-    
     // listen for when the state of transport changes and call the changeListener callback function
     transport.addChangeListener(this);
-    
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
     
-    //==============================================================================
-    queueModel.addItem("TestOne");
-    queueModel.addItem("TestTwo");
-    queueDisplay.updateContent();
     addAndMakeVisible(&queueDisplay);
-    //==============================================================================
 }
 
 MainComponent::~MainComponent()
@@ -110,19 +103,6 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     float* right = bufferToFill.buffer->getWritePointer(1);
     // apply reverb
     reverb.processStereo(left, right, bufferToFill.numSamples);
-    
-    //==============================================================================
-    // if stream is finished: set transportState to Stopped
-    if (transport.getCurrentPosition() >= transport.getLengthInSeconds() && transport.getCurrentPosition() > 0)
-    {
-        const juce::MessageManagerLock mmLock; // acquire access to the message thread before calling component methods
-                                               // note: will automatically free the lock when it goes out of scope
-        if (mmLock.lockWasGained())
-        {
-            transportStateChanged(Stopped);
-        }
-    }
-    //==============================================================================
 }
 
 void MainComponent::releaseResources()
@@ -134,7 +114,6 @@ void MainComponent::releaseResources()
 //==============================================================================
 void MainComponent::paint (juce::Graphics& g)
 {
-//    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
     g.fillAll (CustomLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
@@ -164,12 +143,17 @@ void MainComponent::openButtonClicked()
     // If the user chooses a file
     if (chooser.browseForFileToOpen())
     {
-        // Get the chosen file
+        // Get the chosen file and add to queue
         juce::File loadedFile = chooser.getResult();
-        // Read the file
-        reader.reset(formatManager.createReaderFor(loadedFile));
+        queueModel.addItem(loadedFile);
+        queueDisplay.updateContent();
         
-        transportStateChanged(Stopped);
+        // if this is the only file in the queue, set reader
+        if (queueModel.getNumRows() == 1)
+        {
+            reader.reset(formatManager.createReaderFor(loadedFile));
+            transportStateChanged(Stopped);
+        }
     }
 }
 
@@ -194,8 +178,27 @@ void MainComponent::transportStateChanged(TransportState newState)
             stopButton.setEnabled(false);
             pauseButton.setEnabled(false);
             setButton.setEnabled(false);
+            reverbSlider.setValue(0.0);
+            slowSlider.setValue(0.0);
+            transport.setPosition(0.0);
+            break;
+        case Done:
+            stopTimer();
+            isPaused = false;
+            transport.stop();
+            queueModel.popHead();
+            queueDisplay.updateContent();
+            if (queueModel.getNumRows() > 0) {
+                reader.reset(formatManager.createReaderFor(queueModel.getHead()));
+                transport.setPosition(0.0);
+                setButtonClicked();
+                transportStateChanged(Playing);
+            } else {
+                transportStateChanged(NoFile);
+            }
             break;
         case Stopped:
+            stopTimer();
             isPaused = false;
             transport.stop();
             transport.setPosition(0.0);
@@ -211,8 +214,10 @@ void MainComponent::transportStateChanged(TransportState newState)
             stopButton.setEnabled(true);
             pauseButton.setEnabled(true);
             transport.start();
+            startTimer(10);
             break;
         case Paused:
+            stopTimer();
             isPaused = true;
             transport.stop();
             pauseButton.setEnabled(false);
@@ -238,27 +243,27 @@ void MainComponent::setButtonClicked()
         newInterval = (float)reader->lengthInSamples + 1;
     }
     
-    if (newInterval != slowInterval)
-    {
-        slowInterval = newInterval;
-        slowAudio(slowInterval);
-    }
+    slowInterval = newInterval;
+    slowAudio(slowInterval);
 }
 
+//void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+//{
+//    if (source == &transport)
+//    {
+//        if (isPaused) {
+//            transportStateChanged(Paused);
+//        }
+//        else if (transport.isPlaying()) {
+//            transportStateChanged(Playing);
+//            isPaused = false; // just in case
+//        } else {
+//            transportStateChanged(Stopped);
+//        }
+//    }
+//}
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &transport)
-    {
-        if (isPaused) {
-            transportStateChanged(Paused);
-        }
-        else if (transport.isPlaying()) {
-            transportStateChanged(Playing);
-            isPaused = false; // just in case
-        } else {
-            transportStateChanged(Stopped);
-        }
-    }
 }
 
 int MainComponent::getDestIndex(int sourceSampleNum, int interval)
@@ -334,4 +339,11 @@ void MainComponent::slowAudio(int interval)
     return;
 }
 
-
+void MainComponent::timerCallback()
+{
+    // if stream is finished: change transportState
+    if (transport.getCurrentPosition() >= transport.getLengthInSeconds() && transport.getCurrentPosition() > 0)
+    {
+        transportStateChanged(Done);
+    }
+}
