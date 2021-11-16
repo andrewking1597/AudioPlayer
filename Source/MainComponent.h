@@ -7,7 +7,7 @@
 #include "NameLabel.h"
 #include "QueueModel.h"
 
-class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener
+class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener, public juce::Timer
 {
 public:
     //==============================================================================
@@ -22,6 +22,8 @@ public:
     //==============================================================================
     void paint (juce::Graphics& g) override;
     void resized() override;
+    
+    void timerCallback() override;
 
 private:
     CustomLookAndFeel customLookAndFeel;
@@ -33,6 +35,7 @@ private:
     enum TransportState
     {
         NoFile,
+        Done,
         Stopped,
         Playing,
         Paused
@@ -44,6 +47,9 @@ private:
     juce::AudioTransportSource transport; // positionable audio playback object
     std::unique_ptr<juce::AudioFormatReader> reader;
     juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
+    
+    QueueModel queueModel;
+    juce::ListBox queueDisplay;
     
     // GUI controls
     juce::TextButton openButton;
@@ -68,11 +74,6 @@ private:
     void sliderValueChanged(juce::Slider* slider) override;
     void setButtonClicked();
     void slowAudio(int interval=0);
-    
-    //==============================================================================
-    QueueModel queueModel;
-    juce::ListBox queueDisplay;
-    //==============================================================================
     
     juce::Colour blue = juce::Colour::fromFloatRGBA(0.43f, 0.83f, 1.0f, 1.0f);
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
