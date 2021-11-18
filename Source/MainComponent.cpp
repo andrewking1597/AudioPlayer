@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile)
+MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel)
 {
     // set window size
     setSize (600, 400);
@@ -30,19 +30,19 @@ MainComponent::MainComponent() : state(NoFile)
     addAndMakeVisible(&playButton);
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, abkGreen);
+    playButton.setColour(juce::TextButton::buttonColourId, newGreen);
     playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
     stopButton.setButtonText("Stop");
     stopButton.onClick = [this] { stopButtonClicked(); };
-    stopButton.setColour(juce::TextButton::buttonColourId, fireRed);
+    stopButton.setColour(juce::TextButton::buttonColourId, newRed);
     stopButton.setEnabled(false);
     
     addAndMakeVisible(&pauseButton);
     pauseButton.setButtonText("Pause");
     pauseButton.onClick = [this] { pauseButtonClicked(); };
-    pauseButton.setColour(juce::TextButton::buttonColourId, blue);
+    pauseButton.setColour(juce::TextButton::buttonColourId, newBlue);
     pauseButton.setEnabled(false);
     
     addAndMakeVisible(&reverbLabel);
@@ -52,8 +52,7 @@ MainComponent::MainComponent() : state(NoFile)
     addAndMakeVisible(&reverbSlider);
     reverbSlider.addListener(this);
     reverbSlider.setValue(0.0f);
-    reverbSlider.setPathColor(abkGreen);
-    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
+    reverbSlider.setPathColor(newGreen);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
@@ -62,24 +61,22 @@ MainComponent::MainComponent() : state(NoFile)
     addAndMakeVisible(&slowSlider);
     slowSlider.addListener(this);
     slowSlider.setValue(0.0f);
-    slowSlider.setPathColor(abkPink);
-    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
+    slowSlider.setPathColor(newPink);
     
     addAndMakeVisible(&setButton);
     setButton.setButtonText("Set");
     setButton.onClick = [this] { setButtonClicked(); };
-    setButton.setColour(juce::TextButton::buttonColourId, abkPink);
+    setButton.setColour(juce::TextButton::buttonColourId, newPink);
     setButton.setEnabled(false);
-    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
-    
     // listen for when the state of transport changes and call the changeListener callback function
     transport.addChangeListener(this);
-    
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
+    
+    addAndMakeVisible(&queueDisplay);
 }
 
 MainComponent::~MainComponent()
@@ -117,7 +114,6 @@ void MainComponent::releaseResources()
 //==============================================================================
 void MainComponent::paint (juce::Graphics& g)
 {
-//    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
     g.fillAll (CustomLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
@@ -125,13 +121,16 @@ void MainComponent::resized()
 {
     titleLabel.setBounds(0, 0, getWidth(), 120);
     
-    openButton.setBounds(60, 140, 150, 30); // (75, 150) w = 150, h = 30
-    playButton.setBounds(60, 180, 70, 30); // (75, 190) w = 70, h = 30
-    pauseButton.setBounds(140, 180, 70, 30); // (155, 190) w = 70, h = 30
-    stopButton.setBounds(60, 220, 150, 30); // (75, 230) w = 150, h = 30
-    reverbSlider.setBounds(300, 145 + reverbLabel.getHeight()*0.5, 100, 100);
-    slowSlider.setBounds(440, 145 + slowLabel.getHeight()*0.5, 100, 100);
-    setButton.setBounds(450, 255 + slowLabel.getHeight()*0.5, 80, 25);
+    openButton.setBounds(40, 140, 150, 30); // (75, 150) w = 150, h = 30
+    queueDisplay.setBounds(40, 185, 150, 100);
+    
+    reverbSlider.setBounds(223, 163 + reverbLabel.getHeight()*0.5, 100, 100);
+    slowSlider.setBounds(356, 163 + slowLabel.getHeight()*0.5, 100, 100);
+    setButton.setBounds(366, 284 + slowLabel.getHeight()*0.5, 80, 25);
+    
+    playButton.setBounds(489, 153, 70, 30); // (75, 190) w = 70, h = 30
+    pauseButton.setBounds(489, 198, 70, 30); // (155, 190) w = 70, h = 30
+    stopButton.setBounds(489, 243, 70, 30); // (75, 230) w = 150, h = 30
 }
 
 //==============================================================================
@@ -144,12 +143,17 @@ void MainComponent::openButtonClicked()
     // If the user chooses a file
     if (chooser.browseForFileToOpen())
     {
-        // Get the chosen file
+        // Get the chosen file and add to queue
         juce::File loadedFile = chooser.getResult();
-        // Read the file
-        reader.reset(formatManager.createReaderFor(loadedFile));
+        queueModel.addItem(loadedFile);
+        queueDisplay.updateContent();
         
-        transportStateChanged(Stopped);
+        // if this is the only file in the queue, set reader
+        if (queueModel.getNumRows() == 1)
+        {
+            reader.reset(formatManager.createReaderFor(loadedFile));
+            transportStateChanged(Stopped);
+        }
     }
 }
 
@@ -174,8 +178,27 @@ void MainComponent::transportStateChanged(TransportState newState)
             stopButton.setEnabled(false);
             pauseButton.setEnabled(false);
             setButton.setEnabled(false);
+            reverbSlider.setValue(0.0);
+            slowSlider.setValue(0.0);
+            transport.setPosition(0.0);
+            break;
+        case Done:
+            stopTimer();
+            isPaused = false;
+            transport.stop();
+            queueModel.popHead();
+            queueDisplay.updateContent();
+            if (queueModel.getNumRows() > 0) {
+                reader.reset(formatManager.createReaderFor(queueModel.getHead()));
+                transport.setPosition(0.0);
+                setButtonClicked();
+                transportStateChanged(Playing);
+            } else {
+                transportStateChanged(NoFile);
+            }
             break;
         case Stopped:
+            stopTimer();
             isPaused = false;
             transport.stop();
             transport.setPosition(0.0);
@@ -191,8 +214,10 @@ void MainComponent::transportStateChanged(TransportState newState)
             stopButton.setEnabled(true);
             pauseButton.setEnabled(true);
             transport.start();
+            startTimer(10);
             break;
         case Paused:
+            stopTimer();
             isPaused = true;
             transport.stop();
             pauseButton.setEnabled(false);
@@ -218,27 +243,27 @@ void MainComponent::setButtonClicked()
         newInterval = (float)reader->lengthInSamples + 1;
     }
     
-    if (newInterval != slowInterval)
-    {
-        slowInterval = newInterval;
-        slowAudio(slowInterval);
-    }
+    slowInterval = newInterval;
+    slowAudio(slowInterval);
 }
 
+//void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+//{
+//    if (source == &transport)
+//    {
+//        if (isPaused) {
+//            transportStateChanged(Paused);
+//        }
+//        else if (transport.isPlaying()) {
+//            transportStateChanged(Playing);
+//            isPaused = false; // just in case
+//        } else {
+//            transportStateChanged(Stopped);
+//        }
+//    }
+//}
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &transport)
-    {
-        if (isPaused) {
-            transportStateChanged(Paused);
-        }
-        else if (transport.isPlaying()) {
-            transportStateChanged(Playing);
-            isPaused = false; // just in case
-        } else {
-            transportStateChanged(Stopped);
-        }
-    }
 }
 
 int MainComponent::getDestIndex(int sourceSampleNum, int interval)
@@ -274,9 +299,9 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
 
 void MainComponent::slowAudio(int interval)
 {
-    // set slowBuffer's size to hold twice as many samples as reader
-    slowBuffer.setSize(2, 2 * (int) reader->lengthInSamples, false, true, false);
-    slowBuffer.clear();
+    // set slowBuffer's size to hold enough samples for the slowed audio
+    slowBuffer.setSize(2, 1 + (int)reader->lengthInSamples + (int)reader->lengthInSamples / interval, false, true, false);
+    slowBuffer.clear(); //todo unnecessary bc clearExtraSpace is set to true in the setSize call =============A
     
     // tempBuffer to read the audio stream into
     juce::AudioBuffer<float> tempBuffer; //todo use a pointer and then delete
@@ -286,7 +311,7 @@ void MainComponent::slowAudio(int interval)
     // read audio data into tempBuffer
     reader->read(tempBuffer.getArrayOfWritePointers(), tempBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
     
-    // copy each sample from tempBuffer to slowBuffer and duplicate every interval-th sample is duplicated
+    // copy each sample from tempBuffer to slowBuffer and duplicate every interval-th sample
     for (int sourceSampleIX = 0; sourceSampleIX < tempBuffer.getNumSamples(); sourceSampleIX++)
     {
         // calculate the index to write the sample and write the sample for each channel
@@ -312,4 +337,13 @@ void MainComponent::slowAudio(int interval)
     
     
     return;
+}
+
+void MainComponent::timerCallback()
+{
+    // if stream is finished: change transportState
+    if (transport.getCurrentPosition() >= transport.getLengthInSeconds() && transport.getCurrentPosition() > 0)
+    {
+        transportStateChanged(Done);
+    }
 }
