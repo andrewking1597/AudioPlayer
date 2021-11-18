@@ -30,19 +30,19 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     addAndMakeVisible(&playButton);
     playButton.setButtonText("Play");
     playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, offWhite);
+    playButton.setColour(juce::TextButton::buttonColourId, newGreen);
     playButton.setEnabled(false);
     
     addAndMakeVisible(&stopButton);
     stopButton.setButtonText("Stop");
     stopButton.onClick = [this] { stopButtonClicked(); };
-    stopButton.setColour(juce::TextButton::buttonColourId, offWhite);
+    stopButton.setColour(juce::TextButton::buttonColourId, newRed);
     stopButton.setEnabled(false);
     
     addAndMakeVisible(&pauseButton);
     pauseButton.setButtonText("Pause");
     pauseButton.onClick = [this] { pauseButtonClicked(); };
-    pauseButton.setColour(juce::TextButton::buttonColourId, offWhite);
+    pauseButton.setColour(juce::TextButton::buttonColourId, newBlue);
     pauseButton.setEnabled(false);
     
     addAndMakeVisible(&reverbLabel);
@@ -52,7 +52,7 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     addAndMakeVisible(&reverbSlider);
     reverbSlider.addListener(this);
     reverbSlider.setValue(0.0f);
-    reverbSlider.setPathColor(abkGreen);
+    reverbSlider.setPathColor(newGreen);
     
     addAndMakeVisible(&slowLabel);
     slowLabel.setText("Slow", juce::dontSendNotification);
@@ -61,12 +61,12 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     addAndMakeVisible(&slowSlider);
     slowSlider.addListener(this);
     slowSlider.setValue(0.0f);
-    slowSlider.setPathColor(abkPink);
+    slowSlider.setPathColor(newPink);
     
     addAndMakeVisible(&setButton);
     setButton.setButtonText("Set");
     setButton.onClick = [this] { setButtonClicked(); };
-    setButton.setColour(juce::TextButton::buttonColourId, abkPink);
+    setButton.setColour(juce::TextButton::buttonColourId, newPink);
     setButton.setEnabled(false);
     
     // Configure formatManager to read wav and aiff files
