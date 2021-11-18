@@ -17,9 +17,9 @@ int QueueModel::getNumRows() {
 void QueueModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
 {
     if (rowIsSelected || rowNumber == 0) {
-        g.fillAll(offWhite);
-    } else {
         g.fillAll(offWhite2);
+    } else {
+        g.fillAll(offWhite);
     }
     
     juce::String fname = files[rowNumber].getFileNameWithoutExtension();
