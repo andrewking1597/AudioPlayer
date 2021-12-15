@@ -27,8 +27,10 @@ RotarySlider::RotarySlider()
     setWantsKeyboardFocus(true);
     setTextValueSuffix("%");
     
-    // When the value is changed, update the
-    // number of decimal places to display
+    setChangeNotificationOnlyOnRelease(true);
+    
+    // When the value is changed, update the number of
+    // decimal places to display
     onValueChange = [&]()
     {
         if (getValue() < 10) {
