@@ -25,8 +25,9 @@ public:
     juce::File popHead();
     juce::File getHead();
     juce::File* getHeadPtr();
+    void deleteRow(int rowNumber);
 private:
-    std::vector<juce::File> files; 
+    std::vector<juce::File> files;
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
     juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
     juce::Colour offWhite = juce::Colour::fromFloatRGBA(0.83f, 0.84f, 0.9f, 1.0f);

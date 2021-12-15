@@ -7,7 +7,7 @@
 #include "NameLabel.h"
 #include "QueueModel.h"
 
-class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener, public juce::Timer
+class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener, public juce::Timer, public juce::KeyListener
 {
 public:
     //==============================================================================
@@ -24,6 +24,8 @@ public:
     void resized() override;
     
     void timerCallback() override;
+    
+    bool keyPressed(const juce::KeyPress &key, juce::Component* originatingComponent) override;
 
 private:
     CustomLookAndFeel customLookAndFeel;
@@ -47,6 +49,7 @@ private:
     juce::AudioTransportSource transport; // positionable audio playback object
     std::unique_ptr<juce::AudioFormatReader> reader;
     juce::AudioBuffer<float> slowBuffer; // will hold slowed audio data
+    juce::AudioBuffer<float> originalBuffer; // will hold audio as it is read from file
     
     QueueModel queueModel;
     juce::ListBox queueDisplay;
@@ -72,8 +75,8 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
     void sliderValueChanged(juce::Slider* slider) override;
-    void setButtonClicked();
     void slowAudio(int interval=0);
+    void prepareAudio();
     
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
     juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
