@@ -16,7 +16,7 @@ int QueueModel::getNumRows() {
 
 void QueueModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
 {
-    if (rowIsSelected || rowNumber == 0) {
+    if (rowIsSelected) {
         g.fillAll(offWhite2);
     } else {
         g.fillAll(offWhite);
@@ -50,4 +50,11 @@ juce::File QueueModel::getHead() {
 
 juce::File* QueueModel::getHeadPtr() {
     return &files.at(0);
+}
+
+void QueueModel::deleteRow(int rowNumber)
+{
+    // delete from files vector
+    files.erase(files.begin()+rowNumber);
+    return;
 }
