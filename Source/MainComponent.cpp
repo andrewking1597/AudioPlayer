@@ -20,7 +20,8 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
         setAudioChannels (2, 2);
     }
     
-    // Configure the GUI buttons
+    //==============================================================================
+    // Configure the GUI buttons and sliders
     addAndMakeVisible(&titleLabel);
     titleLabel.setText("Slow + Reverb", juce::dontSendNotification);
     titleLabel.setFont(50.f);
@@ -64,6 +65,9 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     slowSlider.addListener(this);
     slowSlider.setValue(0.0f);
     slowSlider.setPathColor(newPink);
+    //==============================================================================
+    
+    addAndMakeVisible(&queueDisplay);
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
@@ -71,8 +75,6 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     transport.addChangeListener(this);
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
-    
-    addAndMakeVisible(&queueDisplay);
     
 }
 
@@ -169,6 +171,7 @@ void MainComponent::stopButtonClicked()
 
 void MainComponent::transportStateChanged(TransportState newState)
 {
+    TransportState oldState = state;
     state = newState;
     
     switch (state) {
@@ -193,7 +196,8 @@ void MainComponent::transportStateChanged(TransportState newState)
                 reader->read(originalBuffer.getArrayOfWritePointers(), originalBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
                 transport.setPosition(0.0);
                 prepareAudio();
-                transportStateChanged(Playing);
+//                transportStateChanged(Playing);
+                transportStateChanged(oldState);
             } else {
                 transportStateChanged(NoFile);
             }
@@ -266,55 +270,63 @@ int MainComponent::getDestIndex(int sourceSampleNum, int interval)
 
 void MainComponent::sliderValueChanged(juce::Slider* slider)
 {
-    if (slider == &reverbSlider)
-    {
-        float val = (float)reverbSlider.getValue();
-        // convert value to the range 0-1
-        val /= 100;
-        // set wet level to val
-        reverbParams.wetLevel = val;
-        // set dry level to 1-val
-        reverbParams.dryLevel = 1.0f - val;
-        
-        reverb.setParameters(reverbParams);
-    }
-    else if (slider == &slowSlider)
-    {
-        // Keep track of whether audio was playing or not
-        // (we'll resume playback if it was playing)
-        TransportState oldState = state;
-        
-        // Temporarily pause audio playback
-        transportStateChanged(Paused);
-        
-        double currPosition = transport.getCurrentPosition(); // get playhead position (in seconds)
-        double positionRatio = currPosition / transport.getLengthInSeconds();
-        
-        // if slider set to 0: set interval to be greater than numSamples so audio won't be slowed at all
-        int newInterval;
-        if (slowSlider.getValue() > 0) {
-            newInterval = 100 / slowSlider.getValue();
-        } else {
-            newInterval = originalBuffer.getNumSamples() + 1;
-        }
-        
-        // Slow the audio
-        slowInterval = newInterval;
-        slowAudio(slowInterval);
-        
-        // Adjust playhead position to account for the duplicated samples
-        double newPosition = positionRatio * transport.getLengthInSeconds();
-        transport.setPosition(newPosition);
-        
-        // Revert to the previous state
-        transportStateChanged(oldState);
-        // If paused, adjust playhead to account for the duplicated samples
-        if (state == Paused) {
-            transport.setPosition(newPosition);
-        }
+    if (slider == &reverbSlider) {
+        reverbSliderValueChanged();
+    } else if (slider == &slowSlider) {
+        slowSliderValueChanged();
     }
     
     return;
+}
+
+void MainComponent::reverbSliderValueChanged()
+{
+    float val = (float)reverbSlider.getValue();
+    // convert value to the range 0-1
+    val /= 100;
+    // set wet level to val
+    reverbParams.wetLevel = val;
+    // set dry level to 1-val
+    reverbParams.dryLevel = 1.0f - val;
+    reverb.setParameters(reverbParams);
+    
+    return;
+}
+
+void MainComponent::slowSliderValueChanged()
+{
+    // Keep track of whether audio was playing or not
+    // (we'll resume playback if it was playing)
+    TransportState oldState = state;
+    
+    // Temporarily pause audio playback
+    transportStateChanged(Paused);
+    
+    double currPosition = transport.getCurrentPosition(); // get playhead position (in seconds)
+    double positionRatio = currPosition / transport.getLengthInSeconds();
+    
+    // if slider set to 0: set interval to be greater than numSamples so audio won't be slowed at all
+    int newInterval;
+    if (slowSlider.getValue() > 0) {
+        newInterval = 100 / slowSlider.getValue();
+    } else {
+        newInterval = originalBuffer.getNumSamples() + 1;
+    }
+    
+    // Slow the audio
+    slowInterval = newInterval;
+    slowAudio(slowInterval);
+    
+    // Adjust playhead position to account for the duplicated samples
+    double newPosition = positionRatio * transport.getLengthInSeconds();
+    transport.setPosition(newPosition);
+    
+    // Revert to the previous state
+    transportStateChanged(oldState);
+    // If paused, adjust playhead to account for the duplicated samples
+    if (state == Paused) {
+        transport.setPosition(newPosition);
+    }
 }
 
 void MainComponent::slowAudio(int interval)
@@ -363,15 +375,21 @@ void MainComponent::timerCallback()
 bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* originatingComponent)
 {
     // note: delete key has keycode 127, x has keycode 88
-    //todo! delete (127) and backspace (8) not working for some reason
+    //todo! only works if the state has been changed since the song has been selected.
+    //todo! ex: if you select row 1 and click del nothing will happen; but if you select
+    //todo!     row 1 then click play (or stop or pause), it deletes the song as expected.
     if (key.isKeyCode(88) || key.isKeyCode(127) || key.isKeyCode(8))
     {
+        DBG("key pressed!");
         // get index of selected file (queueDisplay)
         int selectedRow = queueDisplay.getSelectedRow();
-        
-        if (selectedRow == 0) {
+        std::cout << selectedRow << std::endl;
+
+        if (selectedRow == 0)
+        {
             transportStateChanged(Done);
-        } else if (selectedRow > 0) {
+        }
+        else if (selectedRow > 0) {
             // delete that index from queueModel
             queueModel.deleteRow(selectedRow);
             // update queueDisplay
