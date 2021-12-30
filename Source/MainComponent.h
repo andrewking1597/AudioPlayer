@@ -1,3 +1,7 @@
+/**
+ @file MainComponent.h
+ */
+
 #pragma once
 
 #include <JuceHeader.h>
@@ -67,15 +71,68 @@ private:
     NameLabel titleLabel;
     
     //==============================================================================
+    /**
+     *@brief Called when openButton is clicked.
+     *Opens a fileChooser window and allows user to select a file to load into the queue. If the queue was previously
+     *empty, the audio data from the selected file is read into originalBuffer and readied for playback.
+     */
     void openButtonClicked();
+    /**
+     *@brief Called when playButton is clicked.
+     *Sets state to Playing, which starts audio playback.
+     */
     void playButtonClicked();
+    /**
+     *@brief Called when stopButton is clicked.
+     *Sets state to Stopped, which stops audio playback and resets playhead to the beginning.
+     */
     void stopButtonClicked();
+    /**
+     *@brief Called when pauseButton is clicked.
+     *Sets state to Paused, which stops audio playback but keeps the playhead in its current position.
+     */
     void pauseButtonClicked();
+    /**
+     *@brief Changes the value of state to a TransportState value.
+     *@param newState  the TransportState value to set state to
+     */
     void transportStateChanged(TransportState newState);
+    
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-    int getDestIndex(int sourceSampleNum, int interval); // calculates destination index based on source index and interval of duplicated samples
+    /**
+     *@brief Calculates the destination index based on the source index and interval of duplicated samples.
+     *@param sourceSampleNum  the index of the sample in the source buffer
+     *@param interval   the interval between samples to be duplicated. If every 5th sample will be duplicated, interval should be set to 5.
+     *@return  the index of the destination buffer the sample should be copied to
+     */
+    int getDestIndex(int sourceSampleNum, int interval);
+    /**
+     *@brief Called when a slider is moved.
+     *Calls a more specific method based on which slider was moved.
+     *@param slider  the slider that was moved
+     *@see reverbSliderValueChanged()
+     *@see slowSliderValueChanged()
+     */
     void sliderValueChanged(juce::Slider* slider) override;
+    /**
+     *@brief Updates the reverb parameters to reflect the new slider value
+     */
+    void reverbSliderValueChanged();
+    /**
+     *@brief Prepares the audio to be slowed and calls slowAudio()
+     *@see slowAudio()
+     */
+    void slowSliderValueChanged();
+    /**
+     *@brief Fills slowedBuffer with a slowed version of the audio data in originalBuffer
+     *@param interval  the interval between samples to be duplicated. If every 5th sample will be duplicated, interval should be set to 5.
+     */
     void slowAudio(int interval=0);
+    /**
+     *@brief Prepares the audio to be slowed, then calls slowAudio()
+     *Calculates the interval based on the value of slowSlider, then slows the audio
+     *@see slowAudio()
+     */
     void prepareAudio();
     
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
