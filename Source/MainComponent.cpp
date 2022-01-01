@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel)
+MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel), prevSelectedRow(-1)
 {
     this->addKeyListener(this);
     
@@ -68,6 +68,7 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     //==============================================================================
     
     addAndMakeVisible(&queueDisplay);
+    queueDisplay.setWantsKeyboardFocus(false);
     
     // Configure formatManager to read wav and aiff files
     formatManager.registerBasicFormats();
@@ -75,7 +76,6 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     transport.addChangeListener(this);
     // call transportStateChanged to set up initial state
     transportStateChanged(NoFile);
-    
 }
 
 MainComponent::~MainComponent()
@@ -281,13 +281,13 @@ void MainComponent::sliderValueChanged(juce::Slider* slider)
 
 void MainComponent::reverbSliderValueChanged()
 {
-    float val = (float)reverbSlider.getValue();
-    // convert value to the range 0-1
-    val /= 100;
-    // set wet level to val
+    // convert reverb value to the range 0-1
+    float val = (float)reverbSlider.getValue() / 100;
+    
+    // Use val to set wet and dry levels
     reverbParams.wetLevel = val;
-    // set dry level to 1-val
     reverbParams.dryLevel = 1.0f - val;
+    
     reverb.setParameters(reverbParams);
     
     return;
@@ -370,6 +370,22 @@ void MainComponent::timerCallback()
     {
         transportStateChanged(Done);
     }
+    
+    // if reverbSlider is set to 0, make sure it registers as a change
+    // see issue #26 for details: https://github.com/andrewking1597/SlowReverbPlayer/issues/26
+    if (reverbSlider.getValue() == 0 && reverbParams.wetLevel != 0) {
+        reverbSliderValueChanged();
+    }
+    
+    // compare prevSelectedRow with the currently selected row
+    // temporary fix for issue #24: https://github.com/andrewking1597/SlowReverbPlayer/issues/24
+    if (prevSelectedRow != queueDisplay.getSelectedRow())
+    {
+        // update prevSelectedRow
+        prevSelectedRow = queueDisplay.getSelectedRow();
+        //? hopefully this readies the delete key?
+        transportStateChanged(state);
+    }
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* originatingComponent)
@@ -385,11 +401,9 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* origi
         int selectedRow = queueDisplay.getSelectedRow();
         std::cout << selectedRow << std::endl;
 
-        if (selectedRow == 0)
-        {
+        if (selectedRow == 0) {
             transportStateChanged(Done);
-        }
-        else if (selectedRow > 0) {
+        } else if (selectedRow > 0) {
             // delete that index from queueModel
             queueModel.deleteRow(selectedRow);
             // update queueDisplay
