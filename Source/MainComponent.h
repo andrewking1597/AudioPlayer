@@ -70,6 +70,8 @@ private:
     juce::TextButton setButton;
     NameLabel titleLabel;
     
+    int prevSelectedRow; //temp? not sure if this will stay
+    
     //==============================================================================
     /**
      *@brief Called when openButton is clicked.
@@ -98,7 +100,6 @@ private:
      */
     void transportStateChanged(TransportState newState);
     
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     /**
      *@brief Calculates the destination index based on the source index and interval of duplicated samples.
      *@param sourceSampleNum  the index of the sample in the source buffer
@@ -134,6 +135,8 @@ private:
      *@see slowAudio()
      */
     void prepareAudio();
+    
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
     juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
