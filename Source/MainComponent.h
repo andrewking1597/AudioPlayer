@@ -6,6 +6,10 @@
 
 #include <JuceHeader.h>
 #include <iostream>
+#include <cstring>
+#include <vector>
+//#include <aubio/aubio.h>
+#include <Headers/aubio.h>
 #include "CustomLookAndFeel.h"
 #include "RotarySlider.h"
 #include "NameLabel.h"
@@ -70,7 +74,17 @@ private:
     juce::TextButton setButton;
     NameLabel titleLabel;
     
-    int prevSelectedRow; //temp? not sure if this will stay
+    bool useTargetBpm;
+    float targetBpm; //todo make a method getTargetBpm() and use that instead so it's always up to date
+    juce::ToggleButton bpmButton;
+    juce::TextEditor bpmInput;
+    void bpmButtonClicked();
+    float getFileBpm(juce::File* f);
+    int getBpmInterval(float sourceBpm, float targetBpm);
+    void updateSlowSliderViaBpm();
+    
+    //DBG
+    int aubioTest();
     
     //==============================================================================
     /**
