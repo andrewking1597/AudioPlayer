@@ -248,7 +248,6 @@ void MainComponent::pauseButtonClicked()
 
 void MainComponent::prepareAudio()
 {
-//    if (useTargetBpm) {
     if (bpmButton.getToggleState()) {
         updateSlowSliderViaBpm();
         return;
@@ -311,6 +310,12 @@ void MainComponent::reverbSliderValueChanged()
 
 void MainComponent::slowSliderValueChanged()
 {
+    // if no file is loaded, set slider back to 0
+    if (state == NoFile) {
+        slowSlider.setValue(0);
+        return;
+    }
+    
     // Keep track of whether audio was playing or not
     // (we'll resume playback if it was playing)
     TransportState oldState = state;
@@ -375,7 +380,6 @@ void MainComponent::slowAudio(int interval)
         playSource.reset(tempSource.release());
     }
     
-    
     return;
 }
 
@@ -439,7 +443,6 @@ void MainComponent::updateSlowSliderViaBpm()
     return;
 }
 
-//todo rename variables (get rid of x prefixes)
 float MainComponent::getFileBpm(juce::File* f)
 {
     uint_t xsampleRate = 0; // we'll set this later
