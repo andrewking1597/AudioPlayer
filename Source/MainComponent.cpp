@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel), prevSelectedRow(-1)
+MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel), bpmInput("bpmInput")
 {
     this->addKeyListener(this);
     
@@ -65,6 +65,15 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     slowSlider.addListener(this);
     slowSlider.setValue(0.0f);
     slowSlider.setPathColor(newPink);
+    
+    addAndMakeVisible(&bpmButton);
+    bpmButton.setButtonText("Use BPM");
+    bpmButton.changeWidthToFitText();
+    bpmButton.onClick = [this] { bpmButtonClicked(); };
+    
+    addAndMakeVisible(&bpmInput);
+    bpmInput.setInputFilter(new BpmInputFilter, true);
+    
     //==============================================================================
     
     addAndMakeVisible(&queueDisplay);
@@ -129,6 +138,9 @@ void MainComponent::resized()
     playButton.setBounds(489, 153, 70, 30); // (75, 190) w = 70, h = 30
     pauseButton.setBounds(489, 198, 70, 30); // (155, 190) w = 70, h = 30
     stopButton.setBounds(489, 243, 70, 30); // (75, 230) w = 150, h = 30
+    
+    bpmButton.setBounds(40, 300, 80, 30);
+    bpmInput.setBounds(40+bpmButton.getWidth()+10, 300, 50, 30);
 }
 
 //==============================================================================
@@ -196,7 +208,6 @@ void MainComponent::transportStateChanged(TransportState newState)
                 reader->read(originalBuffer.getArrayOfWritePointers(), originalBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
                 transport.setPosition(0.0);
                 prepareAudio();
-//                transportStateChanged(Playing);
                 transportStateChanged(oldState);
             } else {
                 transportStateChanged(NoFile);
@@ -237,11 +248,15 @@ void MainComponent::pauseButtonClicked()
 
 void MainComponent::prepareAudio()
 {
+    if (bpmButton.getToggleState()) {
+        updateSlowSliderViaBpm();
+        return;
+    }
+    
     int newInterval = 100 / slowSlider.getValue();
     
     // if slider set to 0: set interval to be greater than numSamples so audio won't be slowed at all
-    if (slowSlider.getValue() == 0)
-    {
+    if (slowSlider.getValue() == 0) {
         newInterval = (float)originalBuffer.getNumSamples()+1;
     }
     
@@ -295,6 +310,12 @@ void MainComponent::reverbSliderValueChanged()
 
 void MainComponent::slowSliderValueChanged()
 {
+    // if no file is loaded, set slider back to 0
+    if (state == NoFile) {
+        slowSlider.setValue(0);
+        return;
+    }
+    
     // Keep track of whether audio was playing or not
     // (we'll resume playback if it was playing)
     TransportState oldState = state;
@@ -359,7 +380,6 @@ void MainComponent::slowAudio(int interval)
         playSource.reset(tempSource.release());
     }
     
-    
     return;
 }
 
@@ -377,26 +397,13 @@ void MainComponent::timerCallback()
         reverbSliderValueChanged();
     }
     
-    // compare prevSelectedRow with the currently selected row
-    // temporary fix for issue #24: https://github.com/andrewking1597/SlowReverbPlayer/issues/24
-    if (prevSelectedRow != queueDisplay.getSelectedRow())
-    {
-        // update prevSelectedRow
-        prevSelectedRow = queueDisplay.getSelectedRow();
-        //? hopefully this readies the delete key?
-        transportStateChanged(state);
-    }
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* originatingComponent)
 {
     // note: delete key has keycode 127, x has keycode 88
-    //todo! only works if the state has been changed since the song has been selected.
-    //todo! ex: if you select row 1 and click del nothing will happen; but if you select
-    //todo!     row 1 then click play (or stop or pause), it deletes the song as expected.
     if (key.isKeyCode(88) || key.isKeyCode(127) || key.isKeyCode(8))
     {
-        DBG("key pressed!");
         // get index of selected file (queueDisplay)
         int selectedRow = queueDisplay.getSelectedRow();
         std::cout << selectedRow << std::endl;
@@ -412,4 +419,90 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* origi
     }
     
     return true;
+}
+
+void MainComponent::bpmButtonClicked()
+{
+    if (bpmButton.getToggleState()) {
+        updateSlowSliderViaBpm();
+    }
+    return;
+}
+
+void MainComponent::updateSlowSliderViaBpm()
+{
+    // detect bpm of current file
+    float sourceBpm = getFileBpm(queueModel.getHeadPtr());
+    
+    // calculate the value slowSlider should be set to to reach the target bpm
+    float bpmSlowVal = 100 * (sourceBpm - getTargetBpm()) / sourceBpm;
+    
+    // update slowSlider
+    slowSlider.setValue(bpmSlowVal);
+    
+    return;
+}
+
+float MainComponent::getFileBpm(juce::File* f)
+{
+    uint_t xsampleRate = 0; // we'll set this later
+    uint_t xwindowSize = 1024;
+    uint_t xhopSize = xwindowSize / 4;
+    uint_t xnumFrames = 0;
+    uint_t xread = 0;
+    
+    std::vector<float> bpmGuesses;
+    std::vector<float> bpmConfidences;
+    
+    juce::String pathname = f->getFullPathName(); //conversion helper
+    std::string stdpathname = pathname.toStdString(); //conversion helper
+    const char_t* xsourcePath = stdpathname.c_str();
+    aubio_source_t* xsource = new_aubio_source(xsourcePath, xsampleRate, xhopSize);
+    
+    if (xsampleRate == 0) xsampleRate = aubio_source_get_samplerate(xsource);
+    
+    // create some vectors
+    fvec_t* xin = new_fvec(xhopSize); // input audio buffer
+    fvec_t* xout = new_fvec(1); // output position
+    
+    // create tempo object
+    aubio_tempo_t* xtempoObj = new_aubio_tempo("default", xwindowSize, xhopSize, xsampleRate);
+    
+    do {
+        // put some fresh data in input vector
+        aubio_source_do(xsource, xin, &xread);
+        // execute tempo
+        aubio_tempo_do(xtempoObj, xin, xout);
+        // append to bpmGuesses and bpmConfidences
+        bpmGuesses.push_back(aubio_tempo_get_bpm(xtempoObj));
+        bpmConfidences.push_back(aubio_tempo_get_confidence(xtempoObj));
+        xnumFrames += xread;
+    } while (xread == xhopSize);
+    
+    // find the index of the highest confidence
+    float maxConf = -1;
+    float maxConf_ix = 0;
+    for (int i = 0; i < bpmConfidences.size(); i++) {
+        if (bpmConfidences.at(i) > maxConf) {
+            maxConf = bpmConfidences.at(i);
+            maxConf_ix = i;
+        }
+    }
+    // get bpm at maxConf_ix of bpmGuesses
+    float bestGuess = bpmGuesses.at(maxConf_ix);
+    
+    // clean up memory
+    del_aubio_tempo(xtempoObj);
+    del_fvec(xin);
+    del_fvec(xout);
+    del_aubio_source(xsource);
+    aubio_cleanup();
+    
+    return bestGuess;
+}
+
+float MainComponent::getTargetBpm()
+{
+    juce::String bpmString = bpmInput.getText();
+    return bpmString.getFloatValue();
 }
