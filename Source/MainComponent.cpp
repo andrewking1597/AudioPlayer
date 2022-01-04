@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel), useTargetBpm(false), bpmInput("bpmInput")
+MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueModel), bpmInput("bpmInput")
 {
     this->addKeyListener(this);
     
@@ -207,7 +207,6 @@ void MainComponent::transportStateChanged(TransportState newState)
                 reader->read(originalBuffer.getArrayOfWritePointers(), originalBuffer.getNumChannels(), 0, (int) reader->lengthInSamples);
                 transport.setPosition(0.0);
                 prepareAudio();
-//                transportStateChanged(Playing);
                 transportStateChanged(oldState);
             } else {
                 transportStateChanged(NoFile);
@@ -248,7 +247,8 @@ void MainComponent::pauseButtonClicked()
 
 void MainComponent::prepareAudio()
 {
-    if (useTargetBpm) {
+//    if (useTargetBpm) {
+    if (bpmButton.getToggleState()) {
         updateSlowSliderViaBpm();
         return;
     }
@@ -418,45 +418,19 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, juce::Component* origi
 
 void MainComponent::bpmButtonClicked()
 {
-    if (bpmButton.getToggleState())
-    {
+    if (bpmButton.getToggleState()) {
         updateSlowSliderViaBpm();
-        
-//        useTargetBpm = true;
-//        juce::String bpmString = bpmInput.getText();
-//        targetBpm = bpmString.getFloatValue();
-//
-//        // detect bpm of current file
-//        float sourceBpm = getFileBpm(queueModel.getHeadPtr());
-//
-//        // calculate the value slowSlider should be set to to reach the target bpm
-//        float bpmSlowVal = 100 * (sourceBpm - targetBpm) / sourceBpm;
-//
-//        // update slowSlider
-//        std::cout << "sourceBpm = " << sourceBpm << std::endl; //DBG
-//        std::cout << "targetBpm = " << targetBpm << std::endl; //DBG
-//        std::cout << "slow value --> " << bpmSlowVal << std::endl; //DBG
-//        slowSlider.setValue(bpmSlowVal);
     }
-    else
-    {
-        useTargetBpm = false;
-    }
-
     return;
 }
 
 void MainComponent::updateSlowSliderViaBpm()
 {
-    useTargetBpm = true;
-    juce::String bpmString = bpmInput.getText();
-    targetBpm = bpmString.getFloatValue();
-    
     // detect bpm of current file
     float sourceBpm = getFileBpm(queueModel.getHeadPtr());
     
     // calculate the value slowSlider should be set to to reach the target bpm
-    float bpmSlowVal = 100 * (sourceBpm - targetBpm) / sourceBpm;
+    float bpmSlowVal = 100 * (sourceBpm - getTargetBpm()) / sourceBpm;
     
     // update slowSlider
     slowSlider.setValue(bpmSlowVal);
@@ -476,7 +450,6 @@ float MainComponent::getFileBpm(juce::File* f)
     std::vector<float> bpmGuesses;
     std::vector<float> bpmConfidences;
     
-//    char_t* xsourcePath = (char*)"/Users/andrewking/Desktop/bounces/New Song.wav";
     juce::String pathname = f->getFullPathName(); //conversion helper
     std::string stdpathname = pathname.toStdString(); //conversion helper
     const char_t* xsourcePath = stdpathname.c_str();
@@ -496,10 +469,7 @@ float MainComponent::getFileBpm(juce::File* f)
         aubio_source_do(xsource, xin, &xread);
         // execute tempo
         aubio_tempo_do(xtempoObj, xin, xout);
-        //do something with the beats
-//        if (xout->data[0] != 0) {
-//            printf("beat at %.3fms, %.3fs, frame %d, %.2f bpm with confidence %.2f\n", aubio_tempo_get_last_ms(xtempoObj), aubio_tempo_get_last_s(xtempoObj), aubio_tempo_get_last(xtempoObj), aubio_tempo_get_bpm(xtempoObj), aubio_tempo_get_confidence(xtempoObj));
-//        }
+        // append to bpmGuesses and bpmConfidences
         bpmGuesses.push_back(aubio_tempo_get_bpm(xtempoObj));
         bpmConfidences.push_back(aubio_tempo_get_confidence(xtempoObj));
         xnumFrames += xread;
@@ -516,9 +486,6 @@ float MainComponent::getFileBpm(juce::File* f)
     }
     // get bpm at maxConf_ix of bpmGuesses
     float bestGuess = bpmGuesses.at(maxConf_ix);
-    printf("BEST GUESS: %.2fs bpm\n", bestGuess);
-    
-//    printf("read %.2fs, %d frames at %dHz (%d blocks) from %s\n", xnumFrames * 1. / xsampleRate, xnumFrames, xsampleRate, xnumFrames / xhopSize, xsourcePath);
     
     // clean up memory
     del_aubio_tempo(xtempoObj);
@@ -527,17 +494,11 @@ float MainComponent::getFileBpm(juce::File* f)
     del_aubio_source(xsource);
     aubio_cleanup();
     
-    
-//    float xtempo = aubio_tempo_get_bpm(xtempoObj);
-//    std::cout << "bpm = " << xtempo << std::endl;
-    
     return bestGuess;
 }
 
-int MainComponent::getBpmInterval(float sourceBpm, float targetBpm)
+float MainComponent::getTargetBpm()
 {
-    // calculate the interval that will transform currentBpm into targetBpm
-    float numSamplesAfterSlowing = originalBuffer.getNumSamples() * sourceBpm / targetBpm;
-    int bpmInterval = numSamplesAfterSlowing / (numSamplesAfterSlowing - originalBuffer.getNumSamples());
-    return bpmInterval;
+    juce::String bpmString = bpmInput.getText();
+    return bpmString.getFloatValue();
 }
