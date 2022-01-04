@@ -72,6 +72,7 @@ MainComponent::MainComponent() : state(NoFile), queueDisplay("Queue", &queueMode
     bpmButton.onClick = [this] { bpmButtonClicked(); };
     
     addAndMakeVisible(&bpmInput);
+    bpmInput.setInputFilter(new BpmInputFilter, true);
     
     //==============================================================================
     
