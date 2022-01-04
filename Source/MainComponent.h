@@ -73,18 +73,8 @@ private:
     RotarySlider slowSlider;
     juce::TextButton setButton;
     NameLabel titleLabel;
-    
-    bool useTargetBpm;
-    float targetBpm; //todo make a method getTargetBpm() and use that instead so it's always up to date
     juce::ToggleButton bpmButton;
     juce::TextEditor bpmInput;
-    void bpmButtonClicked();
-    float getFileBpm(juce::File* f);
-    int getBpmInterval(float sourceBpm, float targetBpm);
-    void updateSlowSliderViaBpm();
-    
-    //DBG
-    int aubioTest();
     
     //==============================================================================
     /**
@@ -93,21 +83,25 @@ private:
      *empty, the audio data from the selected file is read into originalBuffer and readied for playback.
      */
     void openButtonClicked();
+    
     /**
      *@brief Called when playButton is clicked.
      *Sets state to Playing, which starts audio playback.
      */
     void playButtonClicked();
+    
     /**
      *@brief Called when stopButton is clicked.
      *Sets state to Stopped, which stops audio playback and resets playhead to the beginning.
      */
     void stopButtonClicked();
+    
     /**
      *@brief Called when pauseButton is clicked.
      *Sets state to Paused, which stops audio playback but keeps the playhead in its current position.
      */
     void pauseButtonClicked();
+    
     /**
      *@brief Changes the value of state to a TransportState value.
      *@param newState  the TransportState value to set state to
@@ -121,6 +115,7 @@ private:
      *@return  the index of the destination buffer the sample should be copied to
      */
     int getDestIndex(int sourceSampleNum, int interval);
+    
     /**
      *@brief Called when a slider is moved.
      *Calls a more specific method based on which slider was moved.
@@ -129,20 +124,24 @@ private:
      *@see slowSliderValueChanged()
      */
     void sliderValueChanged(juce::Slider* slider) override;
+    
     /**
      *@brief Updates the reverb parameters to reflect the new slider value
      */
     void reverbSliderValueChanged();
+    
     /**
      *@brief Prepares the audio to be slowed and calls slowAudio()
      *@see slowAudio()
      */
     void slowSliderValueChanged();
+    
     /**
      *@brief Fills slowedBuffer with a slowed version of the audio data in originalBuffer
      *@param interval  the interval between samples to be duplicated. If every 5th sample will be duplicated, interval should be set to 5.
      */
     void slowAudio(int interval=0);
+    
     /**
      *@brief Prepares the audio to be slowed, then calls slowAudio()
      *Calculates the interval based on the value of slowSlider, then slows the audio
@@ -151,6 +150,33 @@ private:
     void prepareAudio();
     
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    
+    /**
+     *@brief Callback for when the bpmButton is clicked.
+     *Callback for when the bpmButton is clicked. Calls updateSlowSliderViaBpm()
+     *@see updateSlowSliderViaBpm()
+     */
+    void bpmButtonClicked();
+    
+    /**
+     *@brief Detects the BPM of the given file.
+     *Detects the BPM of the given file using the aubio framework
+     *@param f  pointer to a juce::File object to detect the BPM of
+     *@return  the BPM
+     */
+    float getFileBpm(juce::File* f);
+    
+    /**
+     *@brief Slows the audio to match the target BPM
+     *Slows the audio to match the target BPM by calculating what percentage to slow the audio by and calling setValue() on slowSlider.
+     */
+    void updateSlowSliderViaBpm();
+    
+    /**
+     *@brief Returns the target BPM as a float value.
+     *@return  the target BPM
+     */
+    float getTargetBpm();
     
     juce::Colour grey = juce::Colour::fromFloatRGBA(0.42f, 0.42f, 0.42f, 1.0f);
     juce::Colour blackGrey = juce::Colour::fromFloatRGBA(0.2f, 0.2f, 0.2f, 1.0f);
