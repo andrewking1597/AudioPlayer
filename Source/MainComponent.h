@@ -14,6 +14,7 @@
 #include "RotarySlider.h"
 #include "NameLabel.h"
 #include "QueueModel.h"
+#include "BpmInputFilter.h"
 
 class MainComponent  : public juce::AudioAppComponent, public juce::ChangeListener, juce::Slider::Listener, public juce::Timer, public juce::KeyListener
 {
